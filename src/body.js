@@ -7,9 +7,9 @@ export class Body {
     // **Body** can store and update the properties of a 3D body that incrementally
     // moves from its previous place due to velocities.  It conforms to the
     // approach outlined in the "Fix Your Timestep!" blog post by Glenn Fiedler.
-    constructor(shape, material, size) {
+    constructor(shape, material, size, weight=0, rolling_friction=0) {
         Object.assign(this,
-            {shape, material, size})
+            {shape, material, size, weight, rolling_friction})
     }
 
     // (within some margin of distance).

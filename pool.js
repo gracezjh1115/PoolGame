@@ -93,7 +93,7 @@ export class Test_Data {
             donut: new defs.Torus(15, 15, [[0, 2], [0, 1]]),
             cone: new defs.Closed_Cone(4, 10, [[0, 2], [0, 1]]),
             capped: new defs.Capped_Cylinder(4, 12, [[0, 2], [0, 1]]),
-            ball: new defs.Subdivision_Sphere(3, [[0, 1], [0, 1]]),
+            ball: new defs.Subdivision_Sphere(4, [[0, 1], [0, 1]]),
             cube: new defs.Cube(),
             prism: new (defs.Capped_Cylinder.prototype.make_flat_shaded_version())(10, 10, [[0, 2], [0, 1]]),
             gem: new (defs.Subdivision_Sphere.prototype.make_flat_shaded_version())(2),
@@ -126,6 +126,30 @@ export class Pool_Scene extends Simulation {
             color: hex_color("#eeeee4"),
             ambient: .4, texture: this.data.textures.stars
         })
+
+        // initializing the bodies
+        // table
+//         let model_transform = Mat4.identity();
+//         model_transform = model_transform
+//                             .times(Mat4.translation(0,-10,0));
+//         location 
+        this.bodies.push(new Body(this.shapes.pooltable, this.material, vec3(25,25,25))
+                                 .emplace(Mat4.translation(0, -10, 0), vec3(0,0,0), 0));
+
+        // cuestick
+        this.bodies.push(new Body(this.shapes.cuestick, this.material, vec3(15,15,25))
+                                .emplace(Mat4.rotation(1/3 *Math.PI, 1, 1, 1)
+                                             .times(Mat4.translation(-3, -5, -30)), vec3(0,0,0), 0)); 
+
+        // balls
+        let z = 10;
+        for (let i = 0; i < 9; i++)
+        {   
+            this.bodies.push(new Body(this.shapes.ball, this.material, vec3(1,1,1))
+                                    .emplace(Mat4.translation(5, -5, z), vec3(0,0,0), 0));
+            z -= 2.5
+        }
+
     }
 
     random_color() {
@@ -136,27 +160,27 @@ export class Pool_Scene extends Simulation {
         // update_state():  Override the base time-stepping code to say what this particular
         // scene should do to its bodies every frame -- including applying forces.
         // Generate additional moving bodies if there ever aren't enough:
-        while (this.bodies.length < 150)
-            this.bodies.push(new Body(this.data.random_shape(), this.random_color(), vec3(1, 1 + Math.random(), 1))
-                .emplace(Mat4.translation(...vec3(0, 15, 0).randomized(10)),
-                    vec3(0, -1, 0).randomized(2).normalized().times(3), Math.random()));
+//         while (this.bodies.length < 150)
+//             this.bodies.push(new Body(this.data.random_shape(), this.random_color(), vec3(1, 1 + Math.random(), 1))
+//                 .emplace(Mat4.translation(...vec3(0, 15, 0).randomized(10)),
+//                     vec3(0, -1, 0).randomized(2).normalized().times(3), Math.random()));
 
-        for (let b of this.bodies) {
-            // Gravity on Earth, where 1 unit in world space = 1 meter:
-            b.linear_velocity[1] += dt * -9.8;
-            // If about to fall through floor, reverse y velocity:
-            if (b.center[1] < -8 && b.linear_velocity[1] < 0)
-                b.linear_velocity[1] *= -.8;
-        }
-        // Delete bodies that stop or stray too far away:
-        this.bodies = this.bodies.filter(b => b.center.norm() < 50 && b.linear_velocity.norm() > 2);
+//         for (let b of this.bodies) {
+//             // Gravity on Earth, where 1 unit in world space = 1 meter:
+//             b.linear_velocity[1] += dt * -9.8;
+//             // If about to fall through floor, reverse y velocity:
+//             if (b.center[1] < -8 && b.linear_velocity[1] < 0)
+//                 b.linear_velocity[1] *= -.8;
+//         }
+//         // Delete bodies that stop or stray too far away:
+//         this.bodies = this.bodies.filter(b => b.center.norm() < 50 && b.linear_velocity.norm() > 2);
     }
 
     display(context, program_state) {
         // display(): Draw everything else in the scene besides the moving bodies.
 
         //first, draw everything inherit from parent class, all the moving objects in this case
-        //super.display(context, program_state);
+        
 
         if (!context.scratchpad.controls) {
             this.children.push(context.scratchpad.controls = new defs.Movement_Controls());
@@ -165,30 +189,13 @@ export class Pool_Scene extends Simulation {
         }
         program_state.projection_transform = Mat4.perspective(Math.PI / 4, context.width / context.height, 1, 500);
         program_state.lights = [new Light(vec4(0, -5, -10, 1), color(1, 1, 1, 1), 100000)];
+        super.display(context, program_state);
         // Draw the ground:
 //         this.shapes.square.draw(context, program_state, Mat4.translation(0, -10, 0)
 //                 .times(Mat4.rotation(Math.PI / 2, 1, 0, 0)).times(Mat4.scale(50, 50, 1)),
 //             this.material.override(this.data.textures.earth));
 
         //Draw the table:
-        let model_transform = Mat4.identity();
-        model_transform = model_transform
-                            .times(Mat4.rotation(1/3 *Math.PI, 1, 1, 1))
-                            .times(Mat4.translation(-3,-5,-10))
-                            .times(Mat4.scale(15, 15, 15));
-        
-        this.shapes.cuestick.draw(context, program_state, model_transform, this.material);
-        
-        model_transform = Mat4.identity();
-        model_transform = model_transform
-                            .times(Mat4.translation(0,-10,0))
-                            .times(Mat4.scale(25, 25, 25));
-        this.shapes.pooltable.draw(context, program_state, model_transform, this.material);
-        model_transform = Mat4.identity();
-        model_transform = model_transform
-                            .times(Mat4.translation(5,-5,10));
-                  
-        this.shapes.ball.draw(context, program_state, model_transform, this.material);
     }
 
 //     show_explanation(document_element) {
