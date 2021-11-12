@@ -40,12 +40,8 @@ export class Body {
         return Object.assign(this, {linear_velocity, angular_velocity, spin_axis})
     }
 
-    advance(time_amount) {
-        // advance(): Perform an integration (the simplistic Forward Euler method) to
-        // advance all the linear and angular velocities one time-step forward.
-        console.log(this.linear_velocity, this)
-        this.previous = {center: this.center.copy(), rotation: this.rotation.copy(), linear_velocity: this.linear_velocity.copy()};
-        // Apply the velocities scaled proportionally to real time (time_amount):
+    compute_state_at(time_amount) {
+        let position = this.center, velocity = this.linear_velocity
 
         // Linear velocity first
         if (this.linear_velocity.norm() > 1e-10) {
@@ -53,20 +49,34 @@ export class Body {
                 let stop_time = this.linear_velocity.norm() / this.rolling_friction;
 
                 //center: p = p0 + v0*t + 0.5*at^2
-                this.center = this.center.plus(this.linear_velocity.times(stop_time))
+                position = this.center.plus(this.linear_velocity.times(stop_time))
                     .plus(this.linear_velocity.normalized().times(-this.rolling_friction * stop_time * stop_time));
                 // velocity: v = v0 + at
-                this.linear_velocity = vec3(0, 0, 0)
+                velocity = vec3(0, 0, 0)
+
+                return {position, velocity, stop_time}
             } else {
                 //center: p = p0 + v0*t + 0.5*at^2
-                this.center = this.center.plus(this.linear_velocity.times(time_amount))
+                position = this.center.plus(this.linear_velocity.times(time_amount))
                     .plus(this.linear_velocity.normalized().times(-this.rolling_friction * time_amount * time_amount));
 
-                this.linear_velocity = this.linear_velocity.minus(this.linear_velocity.normalized().times(this.rolling_friction * time_amount))
-
+                velocity = this.linear_velocity.minus(this.linear_velocity.normalized().times(this.rolling_friction * time_amount))
             }
         }
-        console.log(this.center, this.shape)
+
+        return {position, velocity, stop_time: null}
+    }
+
+    advance(time_amount) {
+        // advance(): Perform an integration (the simplistic Forward Euler method) to
+        // advance all the linear and angular velocities one time-step forward.
+        this.previous = {center: this.center.copy(), rotation: this.rotation.copy(), linear_velocity: this.linear_velocity.copy()};
+        // Apply the velocities scaled proportionally to real time (time_amount):
+
+        // Linear velocity first
+        let new_state = this.compute_state_at(time_amount)
+        this.center = new_state.position
+        this.linear_velocity = new_state.velocity
 
         //angular velocity
         this.rotation.pre_multiply(Mat4.rotation(time_amount * this.angular_velocity, ...this.spin_axis));
@@ -112,5 +122,64 @@ export class Body {
         // the unit sphere at the origin.  Leave some leeway.
         return points.arrays.position.some(p =>
             intersect_test(T.times(p.to4(1)).to3(), leeway));
+    }
+
+    /**
+     * the boundary checking algorithm for sphere
+     * @param boundary the array of vec3 representing the boundary polygon
+     * @param dt the time to check
+     */
+    check_if_colliding_boundary(boundary, dt) {
+        let this_r = Math.max(this.size[0], this.size[1], this.size[2])
+        let boundary_normal = boundary[1].minus(boundary[0]).cross(boundary[2].minus(boundary[1])).normalized()
+        if (this.center.minus(boundary[0]).dot(boundary_normal) < 0) boundary_normal = boundary_normal.times(-1); // face this object
+        let moved_polygon = boundary.map((e) => e.plus(boundary_normal.times(this_r)));
+
+        let no_collision_end_state = this.compute_state_at(dt)
+        if (no_collision_end_state.position.minus(moved_polygon[0]).dot(boundary_normal) > 0) return false; //did not cross boundary's plane
+
+        //intersection point
+        let begin_height = this.center.minus(moved_polygon[0]).dot(boundary_normal)
+        let end_height = - no_collision_end_state.position.minus(moved_polygon[0]).dot(boundary_normal)
+        let intersection_point = this.center.times(begin_height / (begin_height + end_height)).plus(no_collision_end_state.position.times(end_height / (begin_height + end_height)))
+
+        //in polygon check
+        let sign = moved_polygon[0].minus(moved_polygon[moved_polygon.length - 1]).cross(intersection_point.minus(moved_polygon[moved_polygon.length - 1])).dot(boundary_normal)
+        for (let i = 0; i < moved_polygon.length - 1; i ++) {
+            let second_sign = moved_polygon[i + 1].minus(moved_polygon[i]).cross(intersection_point.minus(moved_polygon[i])).dot(boundary_normal)
+            if (second_sign * sign <= 0) return false;
+        }
+        return true;
+    }
+
+    /**
+     * the boundary collision algorithm for sphere
+     * @param boundary the array of vec3 representing the boundary polygon
+     * @param dt the time to run
+     */
+    boundary_collision(boundary, dt) {
+        let this_r = Math.max(this.size[0], this.size[1], this.size[2])
+        let boundary_normal = boundary[1].minus(boundary[0]).cross(boundary[2].minus(boundary[1])).normalized()
+        if (this.center.minus(boundary[0]).dot(boundary_normal) < 0) boundary_normal = boundary_normal.times(-1); // face this object
+        let moved_polygon = boundary.map((e) => e.plus(boundary_normal.times(this_r)));
+
+        let no_collision_end_state = this.compute_state_at(dt)
+        if (no_collision_end_state.position.minus(moved_polygon[0]).dot(boundary_normal) > 0) return {...no_collision_end_state, dt}; //did not cross boundary's plane
+
+        //intersection point
+        let begin_height = this.center.minus(moved_polygon[0]).dot(boundary_normal)
+        let end_height = - no_collision_end_state.position.minus(moved_polygon[0]).dot(boundary_normal)
+        let intersection_point = this.center.times(begin_height / (begin_height + end_height)).plus(no_collision_end_state.position.times(end_height / (begin_height + end_height)))
+
+        let intersection_speed = Math.sqrt(this.linear_velocity.dot(this.linear_velocity) - 2 * this.rolling_friction * (intersection_point.minus(this.center).norm()))
+        let velocity_direction = this.linear_velocity.normalized()
+        velocity_direction = velocity_direction.minus(boundary_normal.times(2 * velocity_direction.dot(boundary_normal)))
+        let result_velocity = velocity_direction.times(intersection_speed)
+
+        let intersection_dt;
+        if (this.rolling_friction > 1e-10) intersection_dt = (intersection_speed - this.linear_velocity.norm()) / this.rolling_friction
+        else intersection_dt = (intersection_point.minus(this.center).norm()) / this.linear_velocity.norm()
+
+        return {position: intersection_point, velocity: result_velocity, stop_time: null, dt: intersection_dt}
     }
 }

@@ -28,13 +28,11 @@ export class Simulation extends Scene {
         // Repeatedly step the simulation until we're caught up with this frame:
         while (Math.abs(this.time_accumulator) >= this.dt) {
             // Single step of the simulation for all bodies:
-            this.update_state(this.dt);
-            for (let b of this.bodies)
-                b.advance(this.dt);
+            let actual_dt = this.update_state(this.dt);
             // Following the advice of the article, de-couple
             // our simulation time from our frame rate:
-            this.t += Math.sign(frame_time) * this.dt;
-            this.time_accumulator -= Math.sign(frame_time) * this.dt;
+            this.t += Math.sign(frame_time) * actual_dt;
+            this.time_accumulator -= Math.sign(frame_time) * actual_dt;
             this.steps_taken++;
         }
         // Store an interpolation factor for how close our frame fell in between
@@ -54,7 +52,7 @@ export class Simulation extends Scene {
         });
         this.new_line();
         this.live_string(box => {
-            box.textContent = "Fixed simulation time step size: " + this.dt
+            box.textContent = "Fixed simulation time stedp size: " + this.dt
         });
         this.new_line();
         this.live_string(box => {
@@ -149,18 +147,19 @@ export class Pool_Scene extends Simulation {
 
         // balls
         let z = 10;
-        for (let i = 0; i < 9; i++)
+        for (let i = 0; i < 1; i++)
         {   
-            this.bodies.push(new Body(this.shapes.ball, this.materials.red_plastic, vec3(1,1,1), 0, 0.1)
-                                    .emplace(Mat4.translation(5, -5, z), vec3(1,0,0), 0));
+            this.bodies.push(new Body(this.shapes.ball, this.materials.red_plastic, vec3(1,1,1), 0, 0.2)
+                                    .emplace(Mat4.translation(5, -5, z), vec3(5, 0, 5), 0));
             z -= 2.5
         }
 
         // invisible walls to detect collision with the walls
         this.walls = [];
-        this.walls.push(new Body(this.shapes.cube, this.materials.white_plastic, vec3(10,-5, 1))
-                                .emplace(Mat4.translation(5,-5,20), vec3(0,0,0), 0));
-
+        this.walls.push([vec3(15, -8, -25), vec3(15, -8, 25), vec3(15, -2, 25), vec3(15, -2, -25)]);
+        this.walls.push([vec3(-15, -8, -25), vec3(-15, -8, 25), vec3(-15, -2, 25), vec3(-15, -2, -25)]);
+        this.walls.push([vec3(-15, -8, -25), vec3(15, -8, -25), vec3(15, -2, -25), vec3(-15, -2, -25)]);
+        this.walls.push([vec3(-15, -8, 25), vec3(15, -8, 25), vec3(15, -2, 25), vec3(-15, -2, 25)]);
     }
 
     random_color() {
@@ -187,28 +186,41 @@ export class Pool_Scene extends Simulation {
 //         }
 //         // Delete bodies that stop or stray too far away:
 //         this.bodies = this.bodies.filter(b => b.center.norm() < 50 && b.linear_velocity.norm() > 2);
-        for (let a of this.bodies)
-        {
-            // Cache the inverse of matrix of body "a" to save time.
-            a.inverse = Mat4.inverse(a.drawn_location);
-            // Apply a small centripetal force to everything.
-            
-            // if a is stationary 
-            if (a.linear_velocity.norm() == 0)
-                continue;
-            // *** Collision process is here ***
-            // Loop through all bodies again (call each "b"):
-            for (let b of this.bodies) {
-                // Pass the two bodies and the collision shape to check_if_colliding():
-                if (!a.check_if_colliding(b, this.collider))
-                    continue;
-                // If we get here, we collided, so turn red and zero out the
-                // velocity so they don't inter-penetrate any further.
-                
-                
-            }
-        }
+//         for (let a of this.bodies)
+//         {
+//             // Cache the inverse of matrix of body "a" to save time.
+//             a.inverse = Mat4.inverse(a.drawn_location);
+//             // Apply a small centripetal force to everything.
+//
+//             // if a is stationary
+//             if (a.linear_velocity.norm() == 0)
+//                 continue;
+//             // *** Collision process is here ***
+//             // Loop through all bodies again (call each "b"):
+//             for (let b of this.bodies) {
+//                 // Pass the two bodies and the collision shape to check_if_colliding():
+//                 if (!a.check_if_colliding(b, this.collider))
+//                     continue;
+//                 // If we get here, we collided, so turn red and zero out the
+//                 // velocity so they don't inter-penetrate any further.
+//
+//
+//             }
+//         }
 
+        let earliest = {dt: this.dt, body: null}
+        for (let b of this.bodies)
+            for (let w of this.walls) {
+                let re = b.boundary_collision(w, this.dt);
+                if (re.dt < earliest.dt) earliest = {...re, body: b}
+            }
+        for (let b of this.bodies)
+            b.advance(earliest.dt);
+        if (earliest.body !== null) {
+            earliest.body.center = earliest.position
+            earliest.body.linear_velocity = earliest.velocity
+        }
+        return earliest.dt
     }
 
     display(context, program_state) {
@@ -223,10 +235,10 @@ export class Pool_Scene extends Simulation {
             program_state.set_camera(Mat4.translation(0, 0, -50));    // Locate the camera here (inverted matrix).
         }
         program_state.projection_transform = Mat4.perspective(Math.PI / 4, context.width / context.height, 1, 500);
-        program_state.lights = [new Light(vec4(0, -5, -10, 1), color(1, 1, 1, 1), 100000),
-                                new Light(vec4(0, -5, -10, -50), color(1, 1, 1, 1), 100000),
-                                new Light(vec4(10, -5, -10, 0), color(1, 1, 1, 1), 100000),
-                                new Light(vec4(10, -5, -10, 50), color(1, 1, 1, 1), 100000)];
+        program_state.lights = [new Light(vec4(0, -20, -10, 1), color(1, 1, 1, 1), 100000),
+                                new Light(vec4(0, -20, -10, -50), color(1, 1, 1, 1), 100000),
+                                new Light(vec4(10, -20, -10, 0), color(1, 1, 1, 1), 100000),
+                                new Light(vec4(10, -20, -10, 50), color(1, 1, 1, 1), 100000)];
         super.display(context, program_state);
         // Draw the ground:
 
