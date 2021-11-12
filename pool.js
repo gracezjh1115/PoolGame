@@ -147,8 +147,10 @@ export class Pool_Scene extends Simulation {
                                 .emplace(Mat4.translation(0, -10, 0), vec3(0,0,0), 0));
 
         // table
+
         this.bodies.push(new Body(this.shapes.pooltable, this.materials.green_plastic, vec3(25,25,25))
                                 .emplace(Mat4.translation(0, -10, 0), vec3(0,0,0), 0));
+
 
         // cuestick
         this.bodies.push(new Body(this.shapes.cuestick, this.materials.stars, vec3(15,15,25))
@@ -208,9 +210,6 @@ export class Pool_Scene extends Simulation {
                                 new Light(vec4(0, -5, -10, -20), color(1, 1, 1, 1), 100000)];
         super.display(context, program_state);
         // Draw the ground:
-//         this.shapes.square.draw(context, program_state, Mat4.translation(0, -10, 0)
-//                 .times(Mat4.rotation(Math.PI / 2, 1, 0, 0)).times(Mat4.scale(50, 50, 1)),
-//             this.material.override(this.data.textures.earth));
 
         //Draw the table:
     }
