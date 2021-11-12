@@ -150,7 +150,7 @@ export class Pool_Scene extends Simulation {
         for (let i = 0; i < 1; i++)
         {   
             this.bodies.push(new Body(this.shapes.ball, this.materials.red_plastic, vec3(1,1,1), 0, 0.2)
-                                    .emplace(Mat4.translation(5, -5, z), vec3(5, 0, 5), 0));
+                                    .emplace(Mat4.translation(5, -5, z), vec3(8, 0, 8), 0));
             z -= 2.5
         }
 
