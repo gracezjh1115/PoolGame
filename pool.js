@@ -1,6 +1,6 @@
 import {defs, tiny} from './src/common.js';
 import {Body} from "./src/body.js";
-
+import {Physics} from "./src/physics.js"
 import {Shape_From_File} from './examples/obj-file-demo.js'
 
 // Pull these names into this module's scope for convenience:
@@ -115,6 +115,7 @@ export class Pool_Scene extends Simulation {
     // carry several bodies until they fall due to gravity and bounce.
     constructor() {
         super();
+        this.pm = Physics();
         this.data = new Test_Data();
         this.shapes = Object.assign({}, this.data.shapes);
         this.shapes.square = new defs.Square();
@@ -147,8 +148,10 @@ export class Pool_Scene extends Simulation {
                                 .emplace(Mat4.translation(0, -10, 0), vec3(0,0,0), 0));
 
         // table
+
         this.bodies.push(new Body(this.shapes.pooltable, this.materials.green_plastic, vec3(25,25,25))
                                 .emplace(Mat4.translation(0, -10, 0), vec3(0,0,0), 0));
+
 
         // cuestick
         this.bodies.push(new Body(this.shapes.cuestick, this.materials.stars, vec3(15,15,25))
@@ -174,6 +177,8 @@ export class Pool_Scene extends Simulation {
         // update_state():  Override the base time-stepping code to say what this particular
         // scene should do to its bodies every frame -- including applying forces.
         // Generate additional moving bodies if there ever aren't enough:
+        
+
 //         while (this.bodies.length < 150)
 //             this.bodies.push(new Body(this.data.random_shape(), this.random_color(), vec3(1, 1 + Math.random(), 1))
 //                 .emplace(Mat4.translation(...vec3(0, 15, 0).randomized(10)),
@@ -188,6 +193,28 @@ export class Pool_Scene extends Simulation {
 //         }
 //         // Delete bodies that stop or stray too far away:
 //         this.bodies = this.bodies.filter(b => b.center.norm() < 50 && b.linear_velocity.norm() > 2);
+        for (let a of this.bodies)
+        {
+            // Cache the inverse of matrix of body "a" to save time.
+            a.inverse = Mat4.inverse(a.drawn_location);
+            // Apply a small centripetal force to everything.
+            
+            // if a is stationary 
+            if (a.linear_velocity.norm() == 0)
+                continue;
+            // *** Collision process is here ***
+            // Loop through all bodies again (call each "b"):
+            for (let b of this.bodies) {
+                // Pass the two bodies and the collision shape to check_if_colliding():
+                if (!a.check_if_colliding(b, collider))
+                    continue;
+                // If we get here, we collided, so turn red and zero out the
+                // velocity so they don't inter-penetrate any further.
+                
+                
+            }
+        }
+
     }
 
     display(context, program_state) {
@@ -208,9 +235,6 @@ export class Pool_Scene extends Simulation {
                                 new Light(vec4(10, -5, -10, 50), color(1, 1, 1, 1), 100000)];
         super.display(context, program_state);
         // Draw the ground:
-//         this.shapes.square.draw(context, program_state, Mat4.translation(0, -10, 0)
-//                 .times(Mat4.rotation(Math.PI / 2, 1, 0, 0)).times(Mat4.scale(50, 50, 1)),
-//             this.material.override(this.data.textures.earth));
 
         //Draw the table:
     }
