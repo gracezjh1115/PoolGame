@@ -115,17 +115,15 @@ export class Pool_Scene extends Simulation {
     // carry several bodies until they fall due to gravity and bounce.
     constructor() {
         super();
-        this.pm = Physics();
+        this.pm = new Physics();
         this.data = new Test_Data();
         this.shapes = Object.assign({}, this.data.shapes);
         this.shapes.square = new defs.Square();
+        this.collider = {intersect_test: Body.intersect_sphere, points: new defs.Subdivision_Sphere(2), leeway: .3};
       
 
         const shader = new defs.Fake_Bump_Map(1);
-        this.material = new Material(shader, {
-            color: hex_color("#eeeee4"),
-            ambient: .4, texture: this.data.textures.stars
-        });
+
         this.materials = {
             stars: new Material(shader, {
                 color: hex_color("#eeeee4"),
@@ -143,15 +141,6 @@ export class Pool_Scene extends Simulation {
                 {ambient: .3, diffusivity: .6, color: hex_color("#00ff00")}),
         };
 
-        // background
-        this.bodies.push(new Body(this.shapes.cube, this.materials.background, vec3(100, 100, 100))
-                                .emplace(Mat4.translation(0, -10, 0), vec3(0,0,0), 0));
-
-        // table
-
-        this.bodies.push(new Body(this.shapes.pooltable, this.materials.green_plastic, vec3(25,25,25))
-                                .emplace(Mat4.translation(0, -10, 0), vec3(0,0,0), 0));
-
 
         // cuestick
         this.bodies.push(new Body(this.shapes.cuestick, this.materials.stars, vec3(15,15,25))
@@ -166,6 +155,11 @@ export class Pool_Scene extends Simulation {
                                     .emplace(Mat4.translation(5, -5, z), vec3(1,0,0), 0));
             z -= 2.5
         }
+
+        // invisible walls to detect collision with the walls
+        this.walls = [];
+        this.walls.push(new Body(this.shapes.cube, this.materials.white_plastic, vec3(10,-5, 1))
+                                .emplace(Mat4.translation(5,-5,20), vec3(0,0,0), 0));
 
     }
 
@@ -206,7 +200,7 @@ export class Pool_Scene extends Simulation {
             // Loop through all bodies again (call each "b"):
             for (let b of this.bodies) {
                 // Pass the two bodies and the collision shape to check_if_colliding():
-                if (!a.check_if_colliding(b, collider))
+                if (!a.check_if_colliding(b, this.collider))
                     continue;
                 // If we get here, we collided, so turn red and zero out the
                 // velocity so they don't inter-penetrate any further.
@@ -237,6 +231,16 @@ export class Pool_Scene extends Simulation {
         // Draw the ground:
 
         //Draw the table:
+        // Draw the backgorund
+        let tf = Mat4.translation(0,-10,0).times(Mat4.scale(100,100,100));
+        this.shapes.cube.draw(context, program_state, tf, this.materials.background);
+
+        // Draw the table
+        tf = Mat4.translation(0,-10,0).times(Mat4.scale(25,25,25));
+        this.shapes.pooltable.draw(context, program_state, tf, this.materials.green_plastic);
+
+        // display invisible wall for testing
+//         this.walls[0].shape.draw(context, program_state, this.walls[0].drawn_location, this.walls[0].material);
     }
 
 //     show_explanation(document_element) {
