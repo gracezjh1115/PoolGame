@@ -134,26 +134,32 @@ export class Pool_Scene extends Simulation {
                 color: hex_color("#ffffff"),
                 ambient: .4, texture: this.data.textures.earth
             }),
+            white_plastic: new Material(new defs.Phong_Shader(),
+                {ambient: .4, diffusivity: .6, color: hex_color("#ffffff")}),
+            red_plastic: new Material(new defs.Phong_Shader(),
+                {ambient: .4, diffusivity: .6, color: hex_color("#ff0000")}),
+            green_plastic: new Material(new defs.Phong_Shader(),
+                {ambient: .3, diffusivity: .6, color: hex_color("#00ff00")}),
         };
 
         // background
         this.bodies.push(new Body(this.shapes.cube, this.materials.background, vec3(100, 100, 100))
                                 .emplace(Mat4.translation(0, -10, 0), vec3(0,0,0), 0));
 
-        // location 
-        this.bodies.push(new Body(this.shapes.pooltable, this.materials.stars, vec3(25,25,25))
+        // table
+        this.bodies.push(new Body(this.shapes.pooltable, this.materials.green_plastic, vec3(25,25,25))
                                 .emplace(Mat4.translation(0, -10, 0), vec3(0,0,0), 0));
 
         // cuestick
         this.bodies.push(new Body(this.shapes.cuestick, this.materials.stars, vec3(15,15,25))
                                 .emplace(Mat4.rotation(1/3 *Math.PI, 1, 1, 1)
-                                             .times(Mat4.translation(-3, -5, -30)), vec3(0,0,0), 0)); 
+                                             .times(Mat4.translation(-3, -5, -30)), vec3(0,0,0), 0));
 
         // balls
         let z = 10;
         for (let i = 0; i < 9; i++)
         {   
-            this.bodies.push(new Body(this.shapes.ball, this.material, vec3(1,1,1))
+            this.bodies.push(new Body(this.shapes.ball, this.materials.red_plastic, vec3(1,1,1))
                                     .emplace(Mat4.translation(5, -5, z), vec3(0,0,0), 0));
             z -= 2.5
         }
@@ -196,7 +202,10 @@ export class Pool_Scene extends Simulation {
             program_state.set_camera(Mat4.translation(0, 0, -50));    // Locate the camera here (inverted matrix).
         }
         program_state.projection_transform = Mat4.perspective(Math.PI / 4, context.width / context.height, 1, 500);
-        program_state.lights = [new Light(vec4(0, -5, -10, 1), color(1, 1, 1, 1), 100000)];
+        program_state.lights = [new Light(vec4(0, -5, -10, 1), color(1, 1, 1, 1), 100000),
+                                new Light(vec4(0, -5, -10, -50), color(1, 1, 1, 1), 100000),
+                                new Light(vec4(0, -5, -10, -30), color(1, 1, 1, 1), 100000),
+                                new Light(vec4(0, -5, -10, -20), color(1, 1, 1, 1), 100000)];
         super.display(context, program_state);
         // Draw the ground:
 //         this.shapes.square.draw(context, program_state, Mat4.translation(0, -10, 0)
