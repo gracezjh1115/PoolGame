@@ -87,7 +87,6 @@ export class Test_Data {
             grid: new Texture("assets/grid.png"),
             stars: new Texture("assets/stars.png"),
             text: new Texture("assets/text.png"),
-            //wood: new Texture("assets/wood.png"),
         }
         this.shapes = {
             donut: new defs.Torus(15, 15, [[0, 2], [0, 1]]),
@@ -125,19 +124,28 @@ export class Pool_Scene extends Simulation {
         this.material = new Material(shader, {
             color: hex_color("#eeeee4"),
             ambient: .4, texture: this.data.textures.stars
-        })
+        });
+        this.materials = {
+            stars: new Material(shader, {
+                color: hex_color("#eeeee4"),
+                ambient: .4, texture: this.data.textures.stars
+            }),
+            background: new Material(shader, {
+                color: hex_color("#ffffff"),
+                ambient: .4, texture: this.data.textures.earth
+            }),
+        };
 
-        // initializing the bodies
-        // table
-//         let model_transform = Mat4.identity();
-//         model_transform = model_transform
-//                             .times(Mat4.translation(0,-10,0));
-//         location 
-        this.bodies.push(new Body(this.shapes.pooltable, this.material, vec3(25,25,25))
-                                 .emplace(Mat4.translation(0, -10, 0), vec3(0,0,0), 0));
+        // background
+        this.bodies.push(new Body(this.shapes.cube, this.materials.background, vec3(100, 100, 100))
+                                .emplace(Mat4.translation(0, -10, 0), vec3(0,0,0), 0));
+
+        // location 
+        this.bodies.push(new Body(this.shapes.pooltable, this.materials.stars, vec3(25,25,25))
+                                .emplace(Mat4.translation(0, -10, 0), vec3(0,0,0), 0));
 
         // cuestick
-        this.bodies.push(new Body(this.shapes.cuestick, this.material, vec3(15,15,25))
+        this.bodies.push(new Body(this.shapes.cuestick, this.materials.stars, vec3(15,15,25))
                                 .emplace(Mat4.rotation(1/3 *Math.PI, 1, 1, 1)
                                              .times(Mat4.translation(-3, -5, -30)), vec3(0,0,0), 0)); 
 
