@@ -10,6 +10,14 @@ export class Body {
     constructor(shape, material, size, weight=0, rolling_friction=0) {
         Object.assign(this,
             {shape, material, size, weight, rolling_friction})
+        this.center = vec3(0, 0, 0);
+        this.rotation = Mat4.identity();
+        this.linear_velocity = vec3(0, 0, 0);
+        this.previous = {center: this.center.copy(), rotation: this.rotation.copy(), linear_velocity: this.linear_velocity.copy()};
+        // drawn_location gets replaced with an interpolated quantity:
+        this.drawn_location = Mat4.identity();
+        this.temp_matrix = Mat4.identity();
+        Object.assign(this, {angular_velocity: 0, spin_axis: vec3(1, 0, 0)})
     }
 
     // (within some margin of distance).
@@ -21,7 +29,8 @@ export class Body {
         return p.dot(p) < 1 + margin;
     }
 
-    emplace(location_matrix, linear_velocity, angular_velocity, spin_axis = vec3(0, 0, 0).randomized(1).normalized()) {                               // emplace(): assign the body's initial values, or overwrite them.
+    // emplace(): assign the body's initial values, or overwrite them.
+    emplace(location_matrix, linear_velocity, angular_velocity, spin_axis = vec3(0, 0, 0).randomized(1).normalized()) {
         this.center = location_matrix.times(vec4(0, 0, 0, 1)).to3();
         this.rotation = Mat4.translation(...this.center.times(-1)).times(location_matrix);
         this.previous = {center: this.center.copy(), rotation: this.rotation.copy()};
@@ -34,10 +43,32 @@ export class Body {
     advance(time_amount) {
         // advance(): Perform an integration (the simplistic Forward Euler method) to
         // advance all the linear and angular velocities one time-step forward.
-        this.previous = {center: this.center.copy(), rotation: this.rotation.copy()};
+        console.log(this.linear_velocity, this)
+        this.previous = {center: this.center.copy(), rotation: this.rotation.copy(), linear_velocity: this.linear_velocity.copy()};
         // Apply the velocities scaled proportionally to real time (time_amount):
-        // Linear velocity first, then angular:
-        this.center = this.center.plus(this.linear_velocity.times(time_amount));
+
+        // Linear velocity first
+        if (this.linear_velocity.norm() > 1e-10) {
+            if (this.rolling_friction * time_amount >= this.linear_velocity.norm()) {
+                let stop_time = this.linear_velocity.norm() / this.rolling_friction;
+
+                //center: p = p0 + v0*t + 0.5*at^2
+                this.center = this.center.plus(this.linear_velocity.times(stop_time))
+                    .plus(this.linear_velocity.normalized().times(-this.rolling_friction * stop_time * stop_time));
+                // velocity: v = v0 + at
+                this.linear_velocity = vec3(0, 0, 0)
+            } else {
+                //center: p = p0 + v0*t + 0.5*at^2
+                this.center = this.center.plus(this.linear_velocity.times(time_amount))
+                    .plus(this.linear_velocity.normalized().times(-this.rolling_friction * time_amount * time_amount));
+
+                this.linear_velocity = this.linear_velocity.minus(this.linear_velocity.normalized().times(this.rolling_friction * time_amount))
+
+            }
+        }
+        console.log(this.center, this.shape)
+
+        //angular velocity
         this.rotation.pre_multiply(Mat4.rotation(time_amount * this.angular_velocity, ...this.spin_axis));
     }
 

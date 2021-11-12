@@ -159,8 +159,8 @@ export class Pool_Scene extends Simulation {
         let z = 10;
         for (let i = 0; i < 9; i++)
         {   
-            this.bodies.push(new Body(this.shapes.ball, this.materials.red_plastic, vec3(1,1,1))
-                                    .emplace(Mat4.translation(5, -5, z), vec3(0,0,0), 0));
+            this.bodies.push(new Body(this.shapes.ball, this.materials.red_plastic, vec3(1,1,1), 0, 0.1)
+                                    .emplace(Mat4.translation(5, -5, z), vec3(1,0,0), 0));
             z -= 2.5
         }
 
@@ -204,8 +204,8 @@ export class Pool_Scene extends Simulation {
         program_state.projection_transform = Mat4.perspective(Math.PI / 4, context.width / context.height, 1, 500);
         program_state.lights = [new Light(vec4(0, -5, -10, 1), color(1, 1, 1, 1), 100000),
                                 new Light(vec4(0, -5, -10, -50), color(1, 1, 1, 1), 100000),
-                                new Light(vec4(0, -5, -10, -30), color(1, 1, 1, 1), 100000),
-                                new Light(vec4(0, -5, -10, -20), color(1, 1, 1, 1), 100000)];
+                                new Light(vec4(10, -5, -10, 0), color(1, 1, 1, 1), 100000),
+                                new Light(vec4(10, -5, -10, 50), color(1, 1, 1, 1), 100000)];
         super.display(context, program_state);
         // Draw the ground:
 //         this.shapes.square.draw(context, program_state, Mat4.translation(0, -10, 0)
