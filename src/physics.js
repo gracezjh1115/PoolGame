@@ -29,11 +29,27 @@ export class Physics {
         this.walls.push([vec3(-17, -8, -2), vec3(-15, -8, -2), vec3(-15, -2, -2), vec3(-17, -2, -2)]);
         this.walls.push([vec3(-17, -8,  2), vec3(-15, -8,  2), vec3(-15, -2,  2), vec3(-17, -2,  2)]);
 
-        this.edges = []
-        this.edges.push([vec3(15, -8, -2), vec3(15, -2, -2)])
-        this.edges.push([vec3(15, -8,  2), vec3(15, -2,  2)])
-        this.edges.push([vec3(-15, -8, -2), vec3(-15, -2, -2)])
-        this.edges.push([vec3(-15, -8,  2), vec3(-15, -2,  2)])
+        this.edges = this.get_wall_vertical_edges()
+        console.log(this.edges)
+    }
+
+    get_wall_vertical_edges() {
+        let edges = []
+        for (let w of this.walls) {
+            edges.push([w[w.length - 1], w[0]])
+            for (let i = 0; i < w.length - 1; i ++)
+                edges.push([w[i], w[i + 1]])
+        }
+
+        edges = edges.filter(e => e[0][0] === e[1][0] && e[0][1] !== e[1][1] && e[0][2] === e[1][2])
+        edges.forEach(e => {e.sort((a, b) => a[1] - b[1])})
+        edges = edges.filter(function(item, pos) {
+            for (let i = 0; i < pos; i ++) {
+                if (edges[i][0].equals(item[0]) && edges[i][1].equals(item[1])) return false;
+            }
+            return true;
+        })
+        return edges
     }
     
     // update the state of the two ball involve in a collision

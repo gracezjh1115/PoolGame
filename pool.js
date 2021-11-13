@@ -267,7 +267,7 @@ export class Pool_Scene extends Simulation {
         this.shapes.pooltable.draw(context, program_state, tf, this.materials.green_plastic);
 
         // display invisible wall for testing
-        const display_wall = true
+        const display_wall = false
         if (display_wall) {
             for (let w of this.walls_polygon) {
                 w.draw(context, program_state, Mat4.identity(), this.materials.white_plastic)
