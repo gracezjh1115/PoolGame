@@ -194,4 +194,38 @@ export class Body {
     }
 
     //https://stackoverflow.com/questions/35211114/2d-elastic-ball-collision-physics
+
+    /**
+     * the boundary edge collision algorithm for sphere
+     * @param edge the array of vec3 representing the boundary polygon
+     * @param dt the time to run
+     */
+    edge_collision(edge, dt) {
+        let this_r = Math.max(this.size[0], this.size[1], this.size[2])
+        let no_collision_end_state = {...this.compute_state_at(dt), dt}
+
+        let edge_direction = edge[1].minus(edge[0]).normalized()
+        let edge_to_velocity = edge_direction.cross(this.linear_velocity).normalized()
+        let closest_distance = this.center.minus(edge[0]).dot(edge_to_velocity)
+        if (Math.abs(closest_distance) > this_r) return no_collision_end_state
+
+        let edge_collision_point = edge[0].plus(edge_direction.times(this.center.minus(edge[0]).dot(edge_direction)))
+        let collision_point_to_closest_position = edge_to_velocity.times(closest_distance)
+        let unit_velocity = this.linear_velocity.normalized()
+        let closest_position = this.center.plus(unit_velocity.times(edge[0].minus(this.center).dot(unit_velocity)))
+        let collision_ball_center_to_closest_point_len = Math.sqrt(this_r * this_r - closest_distance * closest_distance)
+        let collision_ball_center = closest_position.minus(unit_velocity.times(collision_ball_center_to_closest_point_len))
+
+        if (no_collision_end_state.position.minus(collision_ball_center).dot(collision_ball_center.minus(this.center)) > 0) { //closest position between the trajectory
+            return no_collision_end_state
+        }
+
+        //construct a surface then return the collision result
+        let surface_normal = collision_ball_center.minus(edge_collision_point)
+        let second_plane_direction = edge_direction.cross(surface_normal).normalized()
+        return this.boundary_collision([edge_collision_point.minus(edge_direction).minus(second_plane_direction),
+                                                 edge_collision_point.minus(edge_direction).plus(second_plane_direction),
+                                                 edge_collision_point.plus(edge_direction).plus(second_plane_direction),
+                                                 edge_collision_point.plus(edge_direction).minus(second_plane_direction)], dt)
+    }
 }
