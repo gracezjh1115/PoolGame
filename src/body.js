@@ -174,16 +174,21 @@ export class Body {
         //intersection point
         let begin_height = this.center.minus(moved_polygon[0]).dot(boundary_normal)
         let end_height = - no_collision_end_state.position.minus(moved_polygon[0]).dot(boundary_normal)
-        let intersection_point = this.center.times(begin_height / (begin_height + end_height)).plus(no_collision_end_state.position.times(end_height / (begin_height + end_height)))
+        let intersection_point = this.center.times(end_height / (begin_height + end_height)).plus(no_collision_end_state.position.times(begin_height / (begin_height + end_height)))
+
+        //in polygon check
+        let sign = moved_polygon[0].minus(moved_polygon[moved_polygon.length - 1]).cross(intersection_point.minus(moved_polygon[moved_polygon.length - 1])).dot(boundary_normal)
+        for (let i = 0; i < moved_polygon.length - 1; i ++) {
+            let second_sign = moved_polygon[i + 1].minus(moved_polygon[i]).cross(intersection_point.minus(moved_polygon[i])).dot(boundary_normal)
+            if (second_sign * sign <= 0) return {...no_collision_end_state, dt};
+        }
 
         let intersection_speed = Math.sqrt(this.linear_velocity.dot(this.linear_velocity) - 2 * this.rolling_friction * (intersection_point.minus(this.center).norm()))
         let velocity_direction = this.linear_velocity.normalized()
         velocity_direction = velocity_direction.minus(boundary_normal.times(2 * velocity_direction.dot(boundary_normal)))
         let result_velocity = velocity_direction.times(intersection_speed)
 
-        let intersection_dt;
-        if (this.rolling_friction > 1e-10) intersection_dt = (this.linear_velocity.norm() - intersection_speed) / this.rolling_friction
-        else intersection_dt = (intersection_point.minus(this.center).norm()) / this.linear_velocity.norm()
+        let intersection_dt = (intersection_point.minus(this.center).norm()) / (this.linear_velocity.norm() + intersection_speed) * 2
 
         return {position: intersection_point, velocity: result_velocity, stop_time: null, dt: intersection_dt}
     }

@@ -147,11 +147,11 @@ export class Pool_Scene extends Simulation {
 
         // balls
         let z = 10;
-        for (let i = 0; i < 10; i++)
+        for (let i = 0; i < 25; i++)
         {   
             this.pm.bodies.push(new Body(this.shapes.ball, this.materials.red_plastic, vec3(1,1,1), 0, 0.2)
                                     .emplace(Mat4.translation(5, -5, z), vec3(8, 0, 8), 0));
-            z -= 2.5
+            z -= 1
         }
 
         // invisible walls to detect collision with the walls

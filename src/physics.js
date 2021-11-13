@@ -45,6 +45,12 @@ export class Physics {
         let object_earliest = {dt: dt * 2}
         for (let w of this.walls) {
             let re = ball.boundary_collision(w, dt);
+            if (object_earliest.dt < dt && re.dt < dt) {
+                console.log(re,object_earliest,ball.center)
+                let ball2 = ball
+                ball2.linear_velocity = object_earliest.velocity
+                ball2.center = object_earliest.position
+            }
             if (re.dt < object_earliest.dt) object_earliest = re
         }
         return object_earliest
