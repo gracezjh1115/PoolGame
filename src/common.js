@@ -60,7 +60,6 @@ const Polygon = defs.Polygon =
             // the combined data you get if you look up index "i" of those lists above -- a position, normal vector,
             // and texture coordinate together.  Lastly we told it how to connect vertex entries into triangles.
             // Every three indices in "this.indices" traces out one triangle.
-            console.log(this.indices)
         }
     }
 

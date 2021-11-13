@@ -12,6 +12,7 @@ export class Simulation extends Scene {
     // the simulation from the frame rate (see below).
     constructor() {
         super();
+        this.pm = new Physics();
         Object.assign(this, {time_accumulator: 0, time_scale: 1, t: 0, dt: 1 / 20, bodies: [], steps_taken: 0});
     }
 
@@ -39,7 +40,7 @@ export class Simulation extends Scene {
         // the two latest simulation time steps, so we can correctly blend the
         // two latest states and display the result.
         let alpha = this.time_accumulator / this.dt;
-        for (let b of this.bodies) b.blend_state(alpha);
+        for (let b of this.pm.bodies) b.blend_state(alpha);
     }
 
     make_control_panel() {
@@ -52,7 +53,7 @@ export class Simulation extends Scene {
         });
         this.new_line();
         this.live_string(box => {
-            box.textContent = "Fixed simulation time stedp size: " + this.dt
+            box.textContent = "Fixed simulation time step size: " + this.dt
         });
         this.new_line();
         this.live_string(box => {
@@ -65,7 +66,7 @@ export class Simulation extends Scene {
         if (program_state.animate)
             this.simulate(program_state.animation_delta_time);
         // Draw each shape at its current location:
-        for (let b of this.bodies)
+        for (let b of this.pm.bodies)
             b.shape.draw(context, program_state, b.drawn_location, b.material);
     }
 
@@ -113,7 +114,6 @@ export class Pool_Scene extends Simulation {
     // carry several bodies until they fall due to gravity and bounce.
     constructor() {
         super();
-        this.pm = new Physics();
         this.data = new Test_Data();
         this.shapes = Object.assign({}, this.data.shapes);
         this.shapes.square = new defs.Square();
@@ -141,7 +141,7 @@ export class Pool_Scene extends Simulation {
 
 
         // cuestick
-        this.bodies.push(new Body(this.shapes.cuestick, this.materials.stars, vec3(15,15,25))
+        this.pm.bodies.push(new Body(this.shapes.cuestick, this.materials.stars, vec3(15,15,25))
                                 .emplace(Mat4.rotation(1/3 *Math.PI, 1, 1, 1)
                                              .times(Mat4.translation(-3, -5, -30)), vec3(0,0,0), 0));
 
@@ -149,19 +149,14 @@ export class Pool_Scene extends Simulation {
         let z = 10;
         for (let i = 0; i < 10; i++)
         {   
-            this.bodies.push(new Body(this.shapes.ball, this.materials.red_plastic, vec3(1,1,1), 0, 0.2)
+            this.pm.bodies.push(new Body(this.shapes.ball, this.materials.red_plastic, vec3(1,1,1), 0, 0.2)
                                     .emplace(Mat4.translation(5, -5, z), vec3(8, 0, 8), 0));
             z -= 2.5
         }
 
         // invisible walls to detect collision with the walls
-        this.walls = [];
-        this.walls.push([vec3(15, -8, -25), vec3(15, -8, 25), vec3(15, -2, 25), vec3(15, -2, -25)]);
-        this.walls.push([vec3(-15, -8, -25), vec3(-15, -8, 25), vec3(-15, -2, 25), vec3(-15, -2, -25)]);
-        this.walls.push([vec3(-15, -8, -25), vec3(15, -8, -25), vec3(15, -2, -25), vec3(-15, -2, -25)]);
-        this.walls.push([vec3(-15, -8, 25), vec3(15, -8, 25), vec3(15, -2, 25), vec3(-15, -2, 25)]);
 
-        this.walls_polygon = this.walls.map((w) => new defs.Polygon(w))
+        this.walls_polygon = this.pm.walls.map((w) => new defs.Polygon(w))
     }
 
     random_color() {
@@ -211,42 +206,35 @@ export class Pool_Scene extends Simulation {
 //         }
 
         let endPoint = new Map()
-        this.bodies.forEach( b => {
+        this.pm.bodies.forEach( b => {
             b.set_previous()
-            endPoint.set(b, {dt: 0, position: b.center, velocity: b.linear_velocity, stop_time: null})
+            let collision_prediction = this.pm.get_earliest_collision_info(b, this.dt)
+            endPoint.set(b, {start_time: 0, ...collision_prediction, end_time : collision_prediction.dt})
         })
-        /*
-        this.bodies.forEach( b => {
-            let object_earliest = {dt: this.dt * 2}
-            for (let w of this.walls) {
-                let re = b.boundary_collision(w, this.dt);
-                if (re.dt < object_earliest.dt) object_earliest = re
-            }
-            endPoint.set(b, object_earliest)
-        })
-        */
 
-        while (true) {
+        while (endPoint.size !== 0) {
             let earliest = this.dt * 2
             let earliest_body = null
             for (let [b, v] of endPoint.entries()) {
-                if (v.dt < earliest) {
-                    earliest = v.dt
+                if (v.end_time < earliest) {
+                    earliest = v.end_time
                     earliest_body = b
                 }
             }
 
-            if (earliest > this.dt) break
-
-            let object_earliest = {dt: this.dt * 2}
-            for (let w of this.walls) {
-                let re = earliest_body.boundary_collision(w, this.dt);
-                if (re.dt < object_earliest.dt) object_earliest = re
+            let object_collision_info = endPoint.get(earliest_body)
+            earliest_body.advance(object_collision_info.dt, false)
+            earliest_body.center = object_collision_info.position
+            earliest_body.linear_velocity = object_collision_info.velocity
+            let new_start_time = object_collision_info.end_time
+            if (new_start_time > this.dt - 1e-10) endPoint.delete(earliest_body)
+            else {
+                let collision_prediction = this.pm.get_earliest_collision_info(earliest_body, this.dt - new_start_time)
+                endPoint.set(earliest_body, {
+                    start_time: new_start_time, ...collision_prediction,
+                    end_time: collision_prediction.dt + new_start_time
+                })
             }
-            earliest_body.advance(object_earliest.dt, false)
-            earliest_body.center = object_earliest.position
-            earliest_body.linear_velocity = object_earliest.velocity
-            endPoint.set(earliest_body, {...object_earliest, dt: earliest + object_earliest.dt})
         }
     }
 
