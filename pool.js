@@ -28,11 +28,11 @@ export class Simulation extends Scene {
         // Repeatedly step the simulation until we're caught up with this frame:
         while (Math.abs(this.time_accumulator) >= this.dt) {
             // Single step of the simulation for all bodies:
-            let actual_dt = this.update_state(this.dt);
+            this.update_state(this.dt);
             // Following the advice of the article, de-couple
             // our simulation time from our frame rate:
-            this.t += Math.sign(frame_time) * actual_dt;
-            this.time_accumulator -= Math.sign(frame_time) * actual_dt;
+            this.t += Math.sign(frame_time) * this.dt;
+            this.time_accumulator -= Math.sign(frame_time) * this.dt;
             this.steps_taken++;
         }
         // Store an interpolation factor for how close our frame fell in between
@@ -147,7 +147,7 @@ export class Pool_Scene extends Simulation {
 
         // balls
         let z = 10;
-        for (let i = 0; i < 1; i++)
+        for (let i = 0; i < 10; i++)
         {   
             this.bodies.push(new Body(this.shapes.ball, this.materials.red_plastic, vec3(1,1,1), 0, 0.2)
                                     .emplace(Mat4.translation(5, -5, z), vec3(8, 0, 8), 0));
@@ -160,6 +160,8 @@ export class Pool_Scene extends Simulation {
         this.walls.push([vec3(-15, -8, -25), vec3(-15, -8, 25), vec3(-15, -2, 25), vec3(-15, -2, -25)]);
         this.walls.push([vec3(-15, -8, -25), vec3(15, -8, -25), vec3(15, -2, -25), vec3(-15, -2, -25)]);
         this.walls.push([vec3(-15, -8, 25), vec3(15, -8, 25), vec3(15, -2, 25), vec3(-15, -2, 25)]);
+
+        this.walls_polygon = this.walls.map((w) => new defs.Polygon(w))
     }
 
     random_color() {
@@ -208,19 +210,44 @@ export class Pool_Scene extends Simulation {
 //             }
 //         }
 
-        let earliest = {dt: this.dt, body: null}
-        for (let b of this.bodies)
+        let endPoint = new Map()
+        this.bodies.forEach( b => {
+            b.set_previous()
+            endPoint.set(b, {dt: 0, position: b.center, velocity: b.linear_velocity, stop_time: null})
+        })
+        /*
+        this.bodies.forEach( b => {
+            let object_earliest = {dt: this.dt * 2}
             for (let w of this.walls) {
                 let re = b.boundary_collision(w, this.dt);
-                if (re.dt < earliest.dt) earliest = {...re, body: b}
+                if (re.dt < object_earliest.dt) object_earliest = re
             }
-        for (let b of this.bodies)
-            b.advance(earliest.dt);
-        if (earliest.body !== null) {
-            earliest.body.center = earliest.position
-            earliest.body.linear_velocity = earliest.velocity
+            endPoint.set(b, object_earliest)
+        })
+        */
+
+        while (true) {
+            let earliest = this.dt * 2
+            let earliest_body = null
+            for (let [b, v] of endPoint.entries()) {
+                if (v.dt < earliest) {
+                    earliest = v.dt
+                    earliest_body = b
+                }
+            }
+
+            if (earliest > this.dt) break
+
+            let object_earliest = {dt: this.dt * 2}
+            for (let w of this.walls) {
+                let re = earliest_body.boundary_collision(w, this.dt);
+                if (re.dt < object_earliest.dt) object_earliest = re
+            }
+            earliest_body.advance(object_earliest.dt, false)
+            earliest_body.center = object_earliest.position
+            earliest_body.linear_velocity = object_earliest.velocity
+            endPoint.set(earliest_body, {...object_earliest, dt: earliest + object_earliest.dt})
         }
-        return earliest.dt
     }
 
     display(context, program_state) {
@@ -252,7 +279,12 @@ export class Pool_Scene extends Simulation {
         this.shapes.pooltable.draw(context, program_state, tf, this.materials.green_plastic);
 
         // display invisible wall for testing
-//         this.walls[0].shape.draw(context, program_state, this.walls[0].drawn_location, this.walls[0].material);
+        const display_wall = true
+        if (display_wall) {
+            for (let w of this.walls_polygon) {
+                w.draw(context, program_state, Mat4.identity(), this.materials.white_plastic)
+            }
+        }
     }
 
 //     show_explanation(document_element) {

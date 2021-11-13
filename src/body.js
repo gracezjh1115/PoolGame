@@ -67,10 +67,14 @@ export class Body {
         return {position, velocity, stop_time: null}
     }
 
-    advance(time_amount) {
+    set_previous() {
+        this.previous = {center: this.center.copy(), rotation: this.rotation.copy(), linear_velocity: this.linear_velocity.copy()};
+    }
+
+    advance(time_amount, set_previous = true) {
         // advance(): Perform an integration (the simplistic Forward Euler method) to
         // advance all the linear and angular velocities one time-step forward.
-        this.previous = {center: this.center.copy(), rotation: this.rotation.copy(), linear_velocity: this.linear_velocity.copy()};
+        if (set_previous) this.set_previous()
         // Apply the velocities scaled proportionally to real time (time_amount):
 
         // Linear velocity first
@@ -164,6 +168,7 @@ export class Body {
         let moved_polygon = boundary.map((e) => e.plus(boundary_normal.times(this_r)));
 
         let no_collision_end_state = this.compute_state_at(dt)
+        if (this.linear_velocity.dot(boundary_normal) > 0) return {...no_collision_end_state, dt}; //going out of the plane, no collision
         if (no_collision_end_state.position.minus(moved_polygon[0]).dot(boundary_normal) > 0) return {...no_collision_end_state, dt}; //did not cross boundary's plane
 
         //intersection point
@@ -177,7 +182,7 @@ export class Body {
         let result_velocity = velocity_direction.times(intersection_speed)
 
         let intersection_dt;
-        if (this.rolling_friction > 1e-10) intersection_dt = (intersection_speed - this.linear_velocity.norm()) / this.rolling_friction
+        if (this.rolling_friction > 1e-10) intersection_dt = (this.linear_velocity.norm() - intersection_speed) / this.rolling_friction
         else intersection_dt = (intersection_point.minus(this.center).norm()) / this.linear_velocity.norm()
 
         return {position: intersection_point, velocity: result_velocity, stop_time: null, dt: intersection_dt}
