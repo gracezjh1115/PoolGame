@@ -187,4 +187,6 @@ export class Body {
 
         return {position: intersection_point, velocity: result_velocity, stop_time: null, dt: intersection_dt}
     }
+
+    //https://stackoverflow.com/questions/35211114/2d-elastic-ball-collision-physics
 }
