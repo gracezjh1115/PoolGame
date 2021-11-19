@@ -118,6 +118,7 @@ export class Pool_Scene extends Simulation {
         this.shapes = Object.assign({}, this.data.shapes);
         this.shapes.square = new defs.Square();
         this.collider = {intersect_test: Body.intersect_sphere, points: new defs.Subdivision_Sphere(2), leeway: .3};
+        this.camera_pos = Mat4.look_at(vec3(0,70,0), vec3(0,0,0), vec3(1,0,0));
       
 
         const shader = new defs.Fake_Bump_Map(1);
@@ -141,7 +142,7 @@ export class Pool_Scene extends Simulation {
 
 
         // cuestick
-        this.pm.bodies.push(new Body(this.shapes.cuestick, this.materials.stars, vec3(15,15,25))
+        this.pm.bodies.push(new Body(this.shapes.cuestick, this.materials.stars, vec3(15,15,20))
                                 .emplace(Mat4.rotation(1/3 *Math.PI, 1, 1, 1)
                                              .times(Mat4.translation(-3, -5, -30)), vec3(0,0,0), 0));
 
@@ -153,6 +154,10 @@ export class Pool_Scene extends Simulation {
                                     .emplace(Mat4.translation(5, -5, z), vec3(8, 0, 8), 0));
             z -= 1
         }
+
+        // cueball
+        this.pm.bodies.push(new Body(this.shapes.ball, this.materials.white_plastic, vec3(1,1,1), 0, 0.2)
+                                    .emplace(Mat4.translation(6, -5, 3), vec3(0, 0, 0), 0))
 
         // invisible walls to detect collision with the walls
 
@@ -247,7 +252,7 @@ export class Pool_Scene extends Simulation {
         if (!context.scratchpad.controls) {
             this.children.push(context.scratchpad.controls = new defs.Movement_Controls());
             this.children.push(new defs.Program_State_Viewer());
-            program_state.set_camera(Mat4.translation(0, 0, -50));    // Locate the camera here (inverted matrix).
+            program_state.set_camera(this.camera_pos);    // Locate the camera here (inverted matrix).
         }
         program_state.projection_transform = Mat4.perspective(Math.PI / 4, context.width / context.height, 1, 500);
         program_state.lights = [new Light(vec4(0, -20, -10, 1), color(1, 1, 1, 1), 100000),
