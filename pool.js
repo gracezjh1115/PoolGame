@@ -4,7 +4,7 @@ import {Physics} from "./src/physics.js"
 import {Shape_From_File} from './examples/obj-file-demo.js'
 
 // Pull these names into this module's scope for convenience:
-const {vec3, unsafe3, vec4, color, hex_color, Mat4, Light, Shape, Material, Shader, Texture, Scene} = tiny;
+const {vec, vec3, unsafe3, vec4, color, hex_color, Mat4, Light, Shape, Material, Shader, Texture, Scene} = tiny;
 
 export class Simulation extends Scene {
     // **Simulation** manages the stepping of simulation time.  Subclass it when making
@@ -141,10 +141,6 @@ export class Pool_Scene extends Simulation {
         };
 
 
-        // cuestick
-        this.pm.bodies.push(new Body(this.shapes.cuestick, this.materials.stars, vec3(15,15,20))
-                                .emplace(Mat4.rotation(1/3 *Math.PI, 1, 1, 1)
-                                             .times(Mat4.translation(-3, -5, -30)), vec3(0,0,0), 0));
 
         // balls
         let z = 10;
@@ -158,6 +154,12 @@ export class Pool_Scene extends Simulation {
         // cueball
         this.pm.bodies.push(new Body(this.shapes.ball, this.materials.white_plastic, vec3(1,1,1), 0, 0.2)
                                     .emplace(Mat4.translation(6, -5, 3), vec3(0, 0, 0), 0))
+        this.cueball_pos = Mat4.translation(6,-5, 3);
+
+        // cuestick
+        this.cuestick_pos = this.cueball_pos.times(Mat4.rotation(0.2, 1,0,0)).times(Mat4.translation(0,0,-12));
+        this.pm.bodies.push(new Body(this.shapes.cuestick, this.materials.stars, vec3(8,8,15))
+                                .emplace(this.cuestick_pos, vec3(0,0,0), 0));
 
         // invisible walls to detect collision with the walls
 
@@ -243,6 +245,40 @@ export class Pool_Scene extends Simulation {
         }
     }
 
+    mouse_hover_cuestick(e, pos, context, program_state)
+    {
+        let pos_ndc_near = vec4(pos[0], pos[1], -1.0, 1.0);
+        let pos_ndc_far  = vec4(pos[0], pos[1],  1.0, 1.0);
+        let center_ndc_near = vec4(0.0, 0.0, -1.0, 1.0);
+        let P = program_state.projection_transform;
+        let V = program_state.camera_inverse;
+        let pos_world_near = Mat4.inverse(P.times(V)).times(pos_ndc_near);
+        let pos_world_far  = Mat4.inverse(P.times(V)).times(pos_ndc_far);
+        let center_world_near  = Mat4.inverse(P.times(V)).times(center_ndc_near);
+        pos_world_near.scale_by(1 / pos_world_near[3]);
+        pos_world_far.scale_by(1 / pos_world_far[3]);
+        center_world_near.scale_by(1 / center_world_near[3]);
+        
+        let cuestick = pos_world_far.minus(pos_world_near);
+        cuestick = pos_world_near.minus(cuestick.times(1 / cuestick[1] * (pos_world_near[1] + 5)));
+        cuestick = cuestick.to3();
+//         console.log(cuestick, this.cueball_pos.times(vec4(0,0,0,1)).to3())
+        let diff = cuestick.minus(this.cueball_pos.times(vec4(0,0,0,1)).to3());
+        let angle = diff.normalized().dot(vec3(0,0,1));
+        
+//         console.log(diff.normalized())
+        angle = Math.acos(angle);
+        let direction = 1;
+        if (diff[0] < 0)
+        {
+            direction = -1
+        }
+        this.pm.bodies[this.pm.bodies.length-1] = 
+            this.pm.bodies[this.pm.bodies.length-1].emplace(this.cueball_pos.times(Mat4.rotation(direction*angle,0,1,0))
+                                                                            .times(Mat4.rotation(0.2, 1,0,0))
+                                                                            .times(Mat4.translation(0,0,-12)), vec3(0,0,0),0);
+    }
+
     display(context, program_state) {
         // display(): Draw everything else in the scene besides the moving bodies.
 
@@ -278,6 +314,20 @@ export class Pool_Scene extends Simulation {
                 w.draw(context, program_state, Mat4.identity(), this.materials.white_plastic)
             }
         }
+        const mouse_position = (e, rect = canvas.getBoundingClientRect()) =>
+                vec((e.clientX - (rect.left + rect.right) / 2) / ((rect.right - rect.left) / 2),
+                    (e.clientY - (rect.bottom + rect.top) / 2) / ((rect.top - rect.bottom) / 2));
+        let canvas = context.canvas;
+        canvas.addEventListener("mousemove", e => {
+                e.preventDefault();
+                const rect = canvas.getBoundingClientRect()
+//                 console.log("e.clientX: " + e.clientX);
+//                 console.log("e.clientX - rect.left: " + (e.clientX - rect.left));
+//                 console.log("e.clientY: " + e.clientY);
+//                 console.log("e.clientY - rect.top: " + (e.clientY - rect.top));
+//                 console.log("mouse_position(e): " + mouse_position(e));
+                this.mouse_hover_cuestick(e, mouse_position(e), context, program_state);
+            });
     }
 
 //     show_explanation(document_element) {
