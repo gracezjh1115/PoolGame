@@ -3,6 +3,8 @@ import {defs, tiny} from './common.js';
 // Pull these names into this module's scope for convenience:
 const {vec3, unsafe3, vec4, color, Mat4, Light, Shape, Material, Shader, Texture, Scene} = tiny;
 
+const BALL_COLLISION_ITER = 2
+
 export class Body {
     // **Body** can store and update the properties of a 3D body that incrementally
     // moves from its previous place due to velocities.  It conforms to the
@@ -193,8 +195,6 @@ export class Body {
         return {position: intersection_point, velocity: result_velocity, stop_time: null, dt: intersection_dt}
     }
 
-    //https://stackoverflow.com/questions/35211114/2d-elastic-ball-collision-physics
-
     /**
      * the boundary edge collision algorithm for sphere
      * @param edge the array of vec3 representing the boundary polygon
@@ -227,5 +227,64 @@ export class Body {
                                                  edge_collision_point.minus(edge_direction).plus(second_plane_direction),
                                                  edge_collision_point.plus(edge_direction).plus(second_plane_direction),
                                                  edge_collision_point.plus(edge_direction).minus(second_plane_direction)], dt)
+    }
+
+    static ball_collision_time_iter(ballA, ballB, dt) {
+        //solve collision time
+        //norm( p + vt - p' - v't ) = r + r'
+        let deltaP = ballA.position.minus(ballB.position)
+        let deltaV = ballA.velocity.minus(ballB.velocity)
+        let equation_a = deltaV.dot(deltaV)
+        let equation_b = 2 * deltaP.dot(deltaV)
+        let equation_c = deltaP.dot(deltaP) - (ballA.radius + ballB.radius) ** 2
+        let equation_delta = equation_b ** 2 - 4 * equation_a * equation_c
+        if (equation_delta <= 0) return null;
+        let t_1 = (- equation_b - Math.sqrt(equation_delta)) / (2 * equation_a)
+        let t_2 = (- equation_b + Math.sqrt(equation_delta)) / (2 * equation_a)
+        if (t_1 < 0 || t_2 < 0 || t_1 > dt) return null;
+        return t_1;
+    }
+
+    /**
+     * https://stackoverflow.com/questions/35211114/2d-elastic-ball-collision-physics
+     * @param otherBall:Body
+     * @param dt
+     */
+    ball_collision(otherBall, dt) {
+        let this_r = Math.max(this.size[0], this.size[1], this.size[2])
+        let otherBall_r = Math.max(otherBall.size[0], otherBall.size[1], otherBall.size[2])
+        let no_collision_end_state = {...this.compute_state_at(dt), dt}
+
+        //solve collision time
+        //norm( p + vt - p' - v't ) = r + r'
+        let t = 0;
+        let this_ball_state = {position: this.center, velocity: this.linear_velocity, radius: this_r}
+        let other_ball_state = {position: otherBall.center, velocity: otherBall.linear_velocity, radius: otherBall_r}
+        for (let i = 0; i < BALL_COLLISION_ITER; i ++) {
+            const next_point_t = Body.ball_collision_time_iter(this_ball_state, other_ball_state, dt);
+            if (next_point_t === null) return no_collision_end_state;
+            t += next_point_t
+            const this_ball_next_state = this.compute_state_at(t)
+            this_ball_state.position = this_ball_next_state.position
+            this_ball_state.velocity = this_ball_next_state.velocity
+            const other_ball_next_state = otherBall.compute_state_at(t)
+            other_ball_state.position = other_ball_next_state.position
+            other_ball_state.velocity = other_ball_next_state.velocity
+            if ((this_ball_next_state.stop_time !== null && this_ball_next_state.stop_time < t) ||
+                (other_ball_next_state.stop_time !== null && other_ball_next_state.stop_time < t)) {
+                return no_collision_end_state
+            }
+        }
+
+        //forward to collision
+        let deltaP = this_ball_state.position.minus(other_ball_state.position)
+        let deltaV = this_ball_state.velocity.minus(other_ball_state.velocity)
+        const this_ball_result_velocity = this_ball_state.velocity.minus(deltaP.times(deltaV.dot(deltaP) / deltaP.dot(deltaP)))
+        deltaP = other_ball_state.position.minus(this_ball_state.position)
+        deltaV = other_ball_state.velocity.minus(this_ball_state.velocity)
+        const other_ball_result_velocity = other_ball_state.velocity.minus(deltaP.times(deltaV.dot(deltaP) / deltaP.dot(deltaP)))
+
+        return {dt: t, velocity: this_ball_result_velocity, position: this_ball_state.position, stop_time: null,
+            other: {dt: t, velocity: other_ball_result_velocity, position: other_ball_state.position, stop_time: null}}
     }
 }

@@ -83,6 +83,10 @@ export class Physics {
             let re = ball.edge_collision(e, dt);
             if (re.dt < object_earliest.dt) object_earliest = re
         }
+        for (let b of this.bodies) {
+            let re = ball.ball_collision(b, dt);
+            if (re.dt < object_earliest.dt) object_earliest = re
+        }
         return object_earliest
     }
 }
