@@ -30,7 +30,6 @@ export class Physics {
         this.walls.push([vec3(-17, -8,  2), vec3(-15, -8,  2), vec3(-15, -2,  2), vec3(-17, -2,  2)]);
 
         this.edges = this.get_wall_vertical_edges()
-        console.log(this.edges)
     }
 
     get_wall_vertical_edges() {
