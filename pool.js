@@ -144,17 +144,17 @@ export class Pool_Scene extends Simulation {
 
         // balls
         let z = 10;
-        for (let i = 0; i < 25; i++)
+        for (let i = 0; i < 10; i++)
         {   
             this.pm.bodies.push(new Body(this.shapes.ball, this.materials.red_plastic, vec3(1,1,1), 0, 0.2)
-                                    .emplace(Mat4.translation(5, -5, z), vec3(8, 0, 8), 0));
-            z -= 1
+                                    .emplace(Mat4.translation(5, -5, z), vec3(4, 0, 4), 0));
+            z -= 2.5
         }
 
         // cueball
         this.pm.bodies.push(new Body(this.shapes.ball, this.materials.white_plastic, vec3(1,1,1), 0, 0.2)
-                                    .emplace(Mat4.translation(6, -5, 3), vec3(0, 0, 0), 0))
-        this.cueball_pos = Mat4.translation(6,-5, 3);
+                                    .emplace(Mat4.translation(10, -5, 3), vec3(0, 0, 0), 0))
+        this.cueball_pos = Mat4.translation(10,-5, 3);
 
         // cuestick
         this.cuestick_pos = this.cueball_pos.times(Mat4.rotation(0.2, 1,0,0)).times(Mat4.translation(0,0,-12));
@@ -211,38 +211,42 @@ export class Pool_Scene extends Simulation {
 //
 //             }
 //         }
+        if (dt < 1E-5) return
 
-        let endPoint = new Map()
+        let bodySimulationStages = new Map()
+        let earliest = dt * 2
         this.pm.bodies.forEach( b => {
-            b.set_previous()
-            let collision_prediction = this.pm.get_earliest_collision_info(b, this.dt)
-            endPoint.set(b, {start_time: 0, ...collision_prediction, end_time : collision_prediction.dt})
+            if (this.dt === dt) b.set_previous()
+            let collision_prediction = this.pm.get_earliest_collision_info(b, dt)
+            bodySimulationStages.set(b, collision_prediction)
+            earliest = Math.min(earliest, collision_prediction.dt)
         })
 
-        while (endPoint.size !== 0) {
-            let earliest = this.dt * 2
-            let earliest_body = null
-            for (let [b, v] of endPoint.entries()) {
-                if (v.end_time < earliest) {
-                    earliest = v.end_time
-                    earliest_body = b
-                }
+        this.pm.bodies.forEach( b => {
+            if (!bodySimulationStages.has(b)) return;
+            if (bodySimulationStages.get(b).dt > earliest + 1E-5) {
+                b.advance(earliest, false)
+                bodySimulationStages.delete(b)
+                return;
             }
 
-            let object_collision_info = endPoint.get(earliest_body)
-            earliest_body.advance(object_collision_info.dt, false)
-            earliest_body.center = object_collision_info.position
-            earliest_body.linear_velocity = object_collision_info.velocity
-            let new_start_time = object_collision_info.end_time
-            if (new_start_time > this.dt - 1e-10) endPoint.delete(earliest_body)
-            else {
-                let collision_prediction = this.pm.get_earliest_collision_info(earliest_body, this.dt - new_start_time)
-                endPoint.set(earliest_body, {
-                    start_time: new_start_time, ...collision_prediction,
-                    end_time: collision_prediction.dt + new_start_time
-                })
+            const object_collision_info = bodySimulationStages.get(b)
+            b.advance(earliest, false)
+            b.center = object_collision_info.position
+            b.linear_velocity = object_collision_info.velocity
+            bodySimulationStages.delete(b)
+
+            //if ball-ball collision,
+            if (object_collision_info.other) {
+                let body = object_collision_info.other.body;
+                body.advance(earliest, false)
+                body.center = object_collision_info.other.position
+                body.linear_velocity = object_collision_info.other.velocity
+                bodySimulationStages.delete(body)
             }
-        }
+        })
+        if (dt - earliest >= 1E-5)
+            this.update_state(dt - earliest)
     }
 
     mouse_hover_cuestick(e, pos, context, program_state)
