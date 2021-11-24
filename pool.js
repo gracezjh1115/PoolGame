@@ -119,6 +119,13 @@ export class Pool_Scene extends Simulation {
         this.shapes.square = new defs.Square();
         this.collider = {intersect_test: Body.intersect_sphere, points: new defs.Subdivision_Sphere(2), leeway: .3};
         this.camera_pos = Mat4.look_at(vec3(0,70,0), vec3(0,0,0), vec3(1,0,0));
+        
+        // 0 = selecting direction, 1 = selecting power, 2 = firing, 3 = balls moving 
+        this.game_state = 0;
+        this.down_start = 0;
+        this.power = 0;
+        this.cueball_init_speed = 0;
+        this.cueball_direction = vec3(0,0,0);
       
 
         const shader = new defs.Fake_Bump_Map(1);
@@ -155,7 +162,7 @@ export class Pool_Scene extends Simulation {
         this.cueball = new Body(this.shapes.ball, this.materials.white_plastic, vec3(1,1,1), 0, 0.2)
             .emplace(Mat4.translation(10, -5, 3), vec3(0, 0, 0), 0)
         this.pm.bodies.push(this.cueball)
-        this.cueball_pos = Mat4.translation(10,-5, 3);
+//         this.cueball_pos = Mat4.translation(10,-5, 3);
 
         // cuestick
         this.cuestick_pos = Mat4.rotation(0.2, 1,0,0).times(Mat4.translation(0,0,-12));
@@ -233,6 +240,7 @@ export class Pool_Scene extends Simulation {
         cuestick = cuestick.to3();
         let diff = cuestick.minus(this.cueball.center);
         let angle = diff.normalized().dot(vec3(0,0,1));
+        this.cueball_direction = diff;
         
         angle = Math.acos(angle);
         let direction = 1;
@@ -245,6 +253,18 @@ export class Pool_Scene extends Simulation {
                                             .times(Mat4.rotation(0.2, 1,0,0))
                                             .times(Mat4.translation(0,0,-12));
                             
+    }
+
+    mouse_down(e, pos, context, program_state)
+    {
+        this.game_state = 1;
+        this.down_start = this.steps_taken;
+    }
+
+    mouse_up(e, pos, context, program_state)
+    {
+        this.game_state = 2;
+        this.cueball_init_speed = (this.steps_taken - this.down_start) * 0.1;
     }
 
     display(context, program_state) {
@@ -286,23 +306,65 @@ export class Pool_Scene extends Simulation {
         // Draw the cuestick
         if (this.pm.all_bodies_static())
         {
+            console.log(this.game_state)
             // handling mouse interaction
             const mouse_position = (e, rect = canvas.getBoundingClientRect()) =>
                     vec((e.clientX - (rect.left + rect.right) / 2) / ((rect.right - rect.left) / 2),
                         (e.clientY - (rect.bottom + rect.top) / 2) / ((rect.top - rect.bottom) / 2));
             let canvas = context.canvas;
-            var last_move = 0
+            var last_move = 0;
+            var last_down = 0;
+            var last_up = 0;
             canvas.addEventListener("mousemove", e => {
-                    if (Date.now() -last_move < 200)
-                    {
-                        return;
-                    }
-                    last_move = Date.now();
-                
-                    e.preventDefault();
-                    const rect = canvas.getBoundingClientRect();
+                if (Date.now() -last_move < 2000 || (this.game_state != 0 && this.game_state != 3))
+                {
+                    return;
+                }
+                last_move = Date.now();
+                this.game_state = 0;
+
+                e.preventDefault();
                 this.mouse_hover_cuestick(e, mouse_position(e), context, program_state);
             });
+            canvas.addEventListener("mousedown", e => {
+                if (Date.now() -last_down > 200 || this.game_state == 0)
+                {
+                    last_down = Date.now();
+                    console.log("down")
+                    this.mouse_down(e, mouse_position(e), context, program_state);
+                }
+
+            })
+            canvas.addEventListener("mouseup", e => {
+                if (Date.now() -last_up > 200 && this.game_state == 1)
+                {
+                    last_up = Date.now();
+                    console.log("up")
+                    this.mouse_up(e, mouse_position(e), context, program_state);                    
+                }
+
+            })
+            if (this.game_state == 1)
+            {
+                let a = this.steps_taken - this.down_start;
+                let d = a - this.power;
+                this.cuestick_pos = this.cuestick_pos.times(Mat4.translation(0,0,-d*0.1));
+                this.power = a;
+            }
+            if (this.game_state == 2)
+            {
+                if (this.power < 10)
+                {
+                    this.power = 0;
+                    this.game_state = 3;
+                    this.cueball.linear_velocity = this.cueball_direction.normalized().times(this.cueball_init_speed);
+                }
+                else
+                {
+                    this.power = this.power - 10;
+                }
+                this.cuestick_pos = this.cuestick_pos.times(Mat4.translation(0,0,1))
+            }
 
             tf = Mat4.translation(...this.cueball.center).times(this.cuestick_pos).times(Mat4.scale(8,8,15));
             this.shapes.cuestick.draw(context, program_state, tf, this.materials.stars);
@@ -313,7 +375,9 @@ export class Pool_Scene extends Simulation {
             let canvas = context.canvas;
             if (canvas.getAttribute('listener') == 'true')
             {
-                canvas.removeEventListener("mousemove")
+                canvas.removeEventListener("mousemove");
+                canvas.removeEventListener("mousedown");
+                canvas.removeEventListener("mouseup");
             }
         }
 
