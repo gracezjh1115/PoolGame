@@ -152,8 +152,9 @@ export class Pool_Scene extends Simulation {
         }
 
         // cueball
-        this.pm.bodies.push(new Body(this.shapes.ball, this.materials.white_plastic, vec3(1,1,1), 0, 0.2)
-                                    .emplace(Mat4.translation(10, -5, 3), vec3(0, 0, 0), 0))
+        this.cueball = new Body(this.shapes.ball, this.materials.white_plastic, vec3(1,1,1), 0, 0.2)
+            .emplace(Mat4.translation(10, -5, 3), vec3(0, 0, 0), 0)
+        this.pm.bodies.push(this.cueball)
         this.cueball_pos = Mat4.translation(10,-5, 3);
 
         // cuestick
@@ -172,43 +173,7 @@ export class Pool_Scene extends Simulation {
         // update_state():  Override the base time-stepping code to say what this particular
         // scene should do to its bodies every frame -- including applying forces.
         // Generate additional moving bodies if there ever aren't enough:
-        
 
-//         while (this.bodies.length < 150)
-//             this.bodies.push(new Body(this.data.random_shape(), this.random_color(), vec3(1, 1 + Math.random(), 1))
-//                 .emplace(Mat4.translation(...vec3(0, 15, 0).randomized(10)),
-//                     vec3(0, -1, 0).randomized(2).normalized().times(3), Math.random()));
-
-//         for (let b of this.bodies) {
-//             // Gravity on Earth, where 1 unit in world space = 1 meter:
-//             b.linear_velocity[1] += dt * -9.8;
-//             // If about to fall through floor, reverse y velocity:
-//             if (b.center[1] < -8 && b.linear_velocity[1] < 0)
-//                 b.linear_velocity[1] *= -.8;
-//         }
-//         // Delete bodies that stop or stray too far away:
-//         this.bodies = this.bodies.filter(b => b.center.norm() < 50 && b.linear_velocity.norm() > 2);
-//         for (let a of this.bodies)
-//         {
-//             // Cache the inverse of matrix of body "a" to save time.
-//             a.inverse = Mat4.inverse(a.drawn_location);
-//             // Apply a small centripetal force to everything.
-//
-//             // if a is stationary
-//             if (a.linear_velocity.norm() == 0)
-//                 continue;
-//             // *** Collision process is here ***
-//             // Loop through all bodies again (call each "b"):
-//             for (let b of this.bodies) {
-//                 // Pass the two bodies and the collision shape to check_if_colliding():
-//                 if (!a.check_if_colliding(b, this.collider))
-//                     continue;
-//                 // If we get here, we collided, so turn red and zero out the
-//                 // velocity so they don't inter-penetrate any further.
-//
-//
-//             }
-//         }
         if (dt < 1E-5) return
 
         let bodySimulationStages = new Map()
@@ -243,8 +208,10 @@ export class Pool_Scene extends Simulation {
                 bodySimulationStages.delete(body)
             }
         })
-        if (dt - earliest >= 1E-5)
+        if (dt - earliest >= 1E-5) {
+            //console.log("next_iter:", dt - earliest)
             this.update_state(dt - earliest)
+        }
     }
 
     mouse_hover_cuestick(e, pos, context, program_state)

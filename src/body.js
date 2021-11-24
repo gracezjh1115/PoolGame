@@ -229,7 +229,7 @@ export class Body {
                                                  edge_collision_point.plus(edge_direction).minus(second_plane_direction)], dt)
     }
 
-    static ball_collision_time_iter(ballA, ballB, dt) {
+    static ball_collision_time_iter(ballA, ballB, dt, debug = false) {
         //solve collision time
         //norm( p + vt - p' - v't ) = r + r'
         let deltaP = ballA.position.minus(ballB.position)
@@ -241,6 +241,7 @@ export class Body {
         if (equation_delta <= 0) return null;
         let t_1 = (- equation_b - Math.sqrt(equation_delta)) / (2 * equation_a)
         let t_2 = (- equation_b + Math.sqrt(equation_delta)) / (2 * equation_a)
+        if (debug) console.log(t_1, t_2)
         if (t_1 < 0 || t_2 < 0 || t_1 > dt) return null;
         return t_1;
     }
@@ -251,9 +252,10 @@ export class Body {
      * @param dt
      */
     ball_collision(otherBall, dt) {
+        let no_collision_end_state = {...this.compute_state_at(dt), dt}
+        if (this === otherBall) return no_collision_end_state
         let this_r = Math.max(this.size[0], this.size[1], this.size[2])
         let otherBall_r = Math.max(otherBall.size[0], otherBall.size[1], otherBall.size[2])
-        let no_collision_end_state = {...this.compute_state_at(dt), dt}
 
         //solve collision time
         //norm( p + vt - p' - v't ) = r + r'
@@ -262,12 +264,19 @@ export class Body {
         let other_ball_state = {position: otherBall.center, velocity: otherBall.linear_velocity, radius: otherBall_r}
         for (let i = 0; i < BALL_COLLISION_ITER; i ++) {
             const next_point_t = Body.ball_collision_time_iter(this_ball_state, other_ball_state, dt);
-            if (next_point_t === null) return no_collision_end_state;
+            if (t === 0 && next_point_t === null) return no_collision_end_state; // will this cause bug?
+            if (next_point_t < 1E-5) break;
             t += next_point_t
-            const this_ball_next_state = this.compute_state_at(t)
+            if (t > dt) return no_collision_end_state;
+            let this_ball_next_state = this.compute_state_at(t)
+            let other_ball_next_state = otherBall.compute_state_at(t)
+            while (this_ball_next_state.position.minus(other_ball_next_state.position).norm() < (this_r + otherBall_r)) {
+                t -= 1E-5
+                this_ball_next_state = this.compute_state_at(t)
+                other_ball_next_state = otherBall.compute_state_at(t)
+            }
             this_ball_state.position = this_ball_next_state.position
             this_ball_state.velocity = this_ball_next_state.velocity
-            const other_ball_next_state = otherBall.compute_state_at(t)
             other_ball_state.position = other_ball_next_state.position
             other_ball_state.velocity = other_ball_next_state.velocity
             if ((this_ball_next_state.stop_time !== null && this_ball_next_state.stop_time < t) ||
