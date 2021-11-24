@@ -88,4 +88,16 @@ export class Physics {
         }
         return object_earliest
     }
+
+    all_bodies_static(epsilon=0.001)
+    {
+        for (let o of this.bodies)
+        {
+            if (o.linear_velocity.norm() > epsilon)
+            {
+                return false;
+            }
+        }
+        return true;
+    }
 }
