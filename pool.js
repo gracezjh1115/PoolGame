@@ -170,6 +170,7 @@ export class Pool_Scene extends Simulation {
         // invisible walls to detect collision with the walls
 
         this.walls_polygon = this.pm.walls.map((w) => new defs.Polygon(w))
+        this.pockets_cylinder = new defs.Capped_Cylinder(5, 20)
     }
 
     random_color() {
@@ -181,44 +182,53 @@ export class Pool_Scene extends Simulation {
         // scene should do to its bodies every frame -- including applying forces.
         // Generate additional moving bodies if there ever aren't enough:
 
-        if (dt < 1E-5) return
+        while (dt >= 1E-5) {
+            let bodySimulationStages = new Map()
+            let earliest = dt * 2
+            this.pm.bodies.forEach(b => {
+                if (this.dt === dt) b.set_previous()
+                let collision_prediction = this.pm.get_earliest_collision_info(b, dt)
+                bodySimulationStages.set(b, collision_prediction)
+                earliest = Math.min(earliest, collision_prediction.dt)
+            })
 
-        let bodySimulationStages = new Map()
-        let earliest = dt * 2
-        this.pm.bodies.forEach( b => {
-            if (this.dt === dt) b.set_previous()
-            let collision_prediction = this.pm.get_earliest_collision_info(b, dt)
-            bodySimulationStages.set(b, collision_prediction)
-            earliest = Math.min(earliest, collision_prediction.dt)
-        })
+            this.pm.bodies.forEach(b => {
+                if (!bodySimulationStages.has(b)) return;
+                if (bodySimulationStages.get(b).dt > earliest + 1E-5) {
+                    b.advance(earliest, false)
+                    bodySimulationStages.delete(b)
+                    return;
+                }
 
-        this.pm.bodies.forEach( b => {
-            if (!bodySimulationStages.has(b)) return;
-            if (bodySimulationStages.get(b).dt > earliest + 1E-5) {
+                const object_collision_info = bodySimulationStages.get(b)
                 b.advance(earliest, false)
+                b.center = object_collision_info.position
+                b.linear_velocity = object_collision_info.velocity
                 bodySimulationStages.delete(b)
-                return;
-            }
 
-            const object_collision_info = bodySimulationStages.get(b)
-            b.advance(earliest, false)
-            b.center = object_collision_info.position
-            b.linear_velocity = object_collision_info.velocity
-            bodySimulationStages.delete(b)
-
-            //if ball-ball collision,
-            if (object_collision_info.other) {
-                let body = object_collision_info.other.body;
-                body.advance(earliest, false)
-                body.center = object_collision_info.other.position
-                body.linear_velocity = object_collision_info.other.velocity
-                bodySimulationStages.delete(body)
-            }
-        })
-        if (dt - earliest >= 1E-5) {
-            //console.log("next_iter:", dt - earliest)
-            this.update_state(dt - earliest)
+                //if ball-ball collision,
+                if (object_collision_info.other) {
+                    let body = object_collision_info.other.body;
+                    body.advance(earliest, false)
+                    body.center = object_collision_info.other.position
+                    body.linear_velocity = object_collision_info.other.velocity
+                    bodySimulationStages.delete(body)
+                }
+            })
+            dt -= earliest;
         }
+        this.pm.bodies = this.pm.bodies.filter((b) => {
+            let re = this.pm.check_all_pockets(b)
+            if (re.removable) {
+                if (b.removal_callback) b.removal_callback()
+                return false;
+            }
+            if (!re.captured) {
+                b.center[1] = this.pm.ballCenterHeight;
+                b.linear_velocity[1] = 0;
+            }
+            return true;
+        })
     }
 
     mouse_hover_cuestick(e, pos, context, program_state)
@@ -296,10 +306,17 @@ export class Pool_Scene extends Simulation {
         this.shapes.pooltable.draw(context, program_state, tf, this.materials.green_plastic);
 
         // display invisible wall for testing
-        const display_wall = false
+        const display_wall = true
         if (display_wall) {
             for (let w of this.walls_polygon) {
                 w.draw(context, program_state, Mat4.identity(), this.materials.white_plastic)
+            }
+
+            for (let p of this.pm.pockets) {
+                this.pockets_cylinder.draw(context, program_state, Mat4.rotation(Math.PI / 2, -1, 0, 0)
+                        .times(Mat4.translation(p[0], p[2], p[1])) // translation in rotated frame
+                        .times(Mat4.scale(this.pm.pocketRadius, this.pm.pocketRadius, 1)),
+                    this.materials.white_plastic)
             }
         }
 

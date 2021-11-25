@@ -30,6 +30,12 @@ export class Physics {
         this.walls.push([vec3(-17, -8,  2), vec3(-15, -8,  2), vec3(-15, -2,  2), vec3(-17, -2,  2)]);
 
         this.edges = this.get_wall_vertical_edges()
+
+        this.pocketRadius = 1.5
+        this.ballCenterHeight = -5
+        this.pockets = []
+        this.pockets.push(vec3(-17, this.ballCenterHeight, 0))
+        this.pockets.push(vec3(17, this.ballCenterHeight, 0))
     }
 
     get_wall_vertical_edges() {
@@ -49,20 +55,6 @@ export class Physics {
             return true;
         })
         return edges
-    }
-    
-    // update the state of the two ball involve in a collision
-    static resolve_ball_ball_collision(a, b)
-    {
-        let a_center = a.center;
-        let b_center = b.center;
-
-    }
-
-    // update the state of the ball involve in a collision with a wall
-    static resolve_ball_wall_collision(ball, wall)
-    {
-        
     }
 
     /**
@@ -99,5 +91,17 @@ export class Physics {
             }
         }
         return true;
+    }
+
+    /**
+     *
+     * @param b:Body
+     */
+    check_all_pockets(b) {
+        for (let p of this.pockets) {
+            let re = b.pocket_update(p, this.pocketRadius, this.ballCenterHeight);
+            if (re.captured) return re;
+        }
+        return {captured: false, removable: false}
     }
 }
