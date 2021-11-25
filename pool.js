@@ -306,7 +306,7 @@ export class Pool_Scene extends Simulation {
         this.shapes.pooltable.draw(context, program_state, tf, this.materials.green_plastic);
 
         // display invisible wall for testing
-        const display_wall = true
+        const display_wall = false
         if (display_wall) {
             for (let w of this.walls_polygon) {
                 w.draw(context, program_state, Mat4.identity(), this.materials.white_plastic)
@@ -323,7 +323,7 @@ export class Pool_Scene extends Simulation {
         // Draw the cuestick
         if (this.pm.all_bodies_static())
         {
-            console.log(this.game_state)
+            //console.log(this.game_state)
             // handling mouse interaction
             const mouse_position = (e, rect = canvas.getBoundingClientRect()) =>
                     vec((e.clientX - (rect.left + rect.right) / 2) / ((rect.right - rect.left) / 2),
@@ -347,7 +347,7 @@ export class Pool_Scene extends Simulation {
                 if (Date.now() -last_down > 200 || this.game_state == 0)
                 {
                     last_down = Date.now();
-                    console.log("down")
+                    //console.log("down")
                     this.mouse_down(e, mouse_position(e), context, program_state);
                 }
 
@@ -356,7 +356,7 @@ export class Pool_Scene extends Simulation {
                 if (Date.now() -last_up > 200 && this.game_state == 1)
                 {
                     last_up = Date.now();
-                    console.log("up")
+                    //console.log("up")
                     this.mouse_up(e, mouse_position(e), context, program_state);                    
                 }
 

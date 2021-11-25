@@ -304,8 +304,8 @@ export class Body {
         const center_dist = pocket_on_this_level.minus(this.center)
         if (center_dist.norm() > r) return {captured: false, removable: false};
         let this_r = Math.max(this.size[0], this.size[1], this.size[2])
-        if (this.center.minus(pocket_on_this_level).norm() <= r - this_r) return {captured: true, removable: true};
-        this.linear_velocity = center_dist.normalized().times(this.linear_velocity.norm())
+        if (this.center.minus(pocket_on_this_level).norm() <= (r - this_r)) return {captured: true, removable: true};
+        this.linear_velocity = center_dist
         const off_edge = r - center_dist.norm();
         const height = Math.sqrt(this_r ** 2 - off_edge ** 2);
         const downward_dy = this_r - height;
