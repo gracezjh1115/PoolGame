@@ -60,7 +60,10 @@ export class Shape_From_File extends Shape {                                   /
                     if (elements[j] in unpacked.hashindices)
                         unpacked.indices.push(unpacked.hashindices[elements[j]]);
                     else {
-                        var vertex = elements[j].split('/');
+                        var vertex = elements[j].split('/').map(Number.parseInt);
+                        if (vertex[0] < 0) vertex[0] += verts.length / 3 + 1;
+                        if (vertex[1] < 0) vertex[1] += textures.length / 2 + 1;
+                        if (vertex[2] < 0) vertex[2] += vertNormals.length / 3 + 1;
 
                         unpacked.verts.push(+verts[(vertex[0] - 1) * 3 + 0]);
                         unpacked.verts.push(+verts[(vertex[0] - 1) * 3 + 1]);
