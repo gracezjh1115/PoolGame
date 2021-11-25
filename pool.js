@@ -97,8 +97,9 @@ export class Test_Data {
             gem: new (defs.Subdivision_Sphere.prototype.make_flat_shaded_version())(2),
             donut2: new (defs.Torus.prototype.make_flat_shaded_version())(20, 20, [[0, 2], [0, 1]]),
             //background
-            "pooltable": new Shape_From_File("assets/background/pool_table.obj"),
-            "cuestick": new Shape_From_File("assets/background/cue_stick.obj"),
+            //table 2: https://www.cgtrader.com/items/2816943
+            pooltable: new Shape_From_File("assets/background/Pool_table2.obj"),
+            cuestick: new Shape_From_File("assets/background/cue_stick.obj"),
         };
     }
 
@@ -144,7 +145,7 @@ export class Pool_Scene extends Simulation {
             red_plastic: new Material(new defs.Phong_Shader(),
                 {ambient: .4, diffusivity: .6, color: hex_color("#ff0000")}),
             green_plastic: new Material(new defs.Phong_Shader(),
-                {ambient: .3, diffusivity: .6, color: hex_color("#00ff00")}),
+                {ambient: .7, diffusivity: .3, specularity: 0, color: hex_color("#009900")}),
         };
 
 
@@ -289,24 +290,30 @@ export class Pool_Scene extends Simulation {
             program_state.set_camera(this.camera_pos);    // Locate the camera here (inverted matrix).
         }
         program_state.projection_transform = Mat4.perspective(Math.PI / 4, context.width / context.height, 1, 500);
-        program_state.lights = [new Light(vec4(0, -20, -10, 1), color(1, 1, 1, 1), 100000),
-                                new Light(vec4(0, -20, -10, -50), color(1, 1, 1, 1), 100000),
-                                new Light(vec4(10, -20, -10, 0), color(1, 1, 1, 1), 100000),
-                                new Light(vec4(10, -20, -10, 50), color(1, 1, 1, 1), 100000)];
+        program_state.lights = [new Light(vec4(-10, 20, -20, 1), color(1, 1, 1, 1), 1000),
+                                new Light(vec4(-10, 20, 20, 1), color(1, 1, 1, 1), 1000),
+                                new Light(vec4(10, 20, -20, 1), color(1, 1, 1, 1), 1000),
+                                new Light(vec4(10, 20, 20, 1), color(1, 1, 1, 1), 1000)];
         super.display(context, program_state);
-        // Draw the ground:
+        //draw the light
+        this.shapes.ball.draw(context, program_state, Mat4.translation(-10, 20, -20), this.materials.red_plastic)
+        this.shapes.ball.draw(context, program_state, Mat4.translation(-10, 20, 20), this.materials.red_plastic)
+        this.shapes.ball.draw(context, program_state, Mat4.translation(10, 20, -20), this.materials.red_plastic)
+        this.shapes.ball.draw(context, program_state, Mat4.translation(10, 20, 20), this.materials.red_plastic)
 
+
+        // Draw the ground:
         //Draw the table:
         // Draw the backgorund
         let tf = Mat4.translation(0,-10,0).times(Mat4.scale(100,100,100));
         this.shapes.cube.draw(context, program_state, tf, this.materials.background);
 
         // Draw the table
-        tf = Mat4.translation(0,-10,0).times(Mat4.scale(25,25,25));
+        tf = Mat4.rotation(Math.PI / 2, 0, 1, 0).times(Mat4.translation(0,-7,0)).times(Mat4.scale(30,30,30));
         this.shapes.pooltable.draw(context, program_state, tf, this.materials.green_plastic);
 
         // display invisible wall for testing
-        const display_wall = false
+        const display_wall = true
         if (display_wall) {
             for (let w of this.walls_polygon) {
                 w.draw(context, program_state, Mat4.identity(), this.materials.white_plastic)
