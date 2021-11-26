@@ -42,10 +42,14 @@ export class Shape_From_File extends Shape {                                   /
         var FACE_RE = /^f\s/;
         var WHITESPACE_RE = /\s+/;
 
+        var texture_coord_dim = 2;
+
         for (var i = 0; i < lines.length; i++) {
             var line = lines[i].trim();
             var elements = line.split(WHITESPACE_RE);
             elements.shift();
+
+            if (TEXTURE_RE.test(line)) texture_coord_dim = elements.length;
 
             if (VERTEX_RE.test(line)) verts.push.apply(verts, elements);
             else if (NORMAL_RE.test(line)) vertNormals.push.apply(vertNormals, elements);
@@ -62,7 +66,7 @@ export class Shape_From_File extends Shape {                                   /
                     else {
                         var vertex = elements[j].split('/').map(Number.parseInt);
                         if (vertex[0] < 0) vertex[0] += verts.length / 3 + 1;
-                        if (vertex[1] < 0) vertex[1] += textures.length / 2 + 1;
+                        if (vertex[1] < 0) vertex[1] += textures.length / texture_coord_dim + 1;
                         if (vertex[2] < 0) vertex[2] += vertNormals.length / 3 + 1;
 
                         unpacked.verts.push(+verts[(vertex[0] - 1) * 3 + 0]);
@@ -70,8 +74,8 @@ export class Shape_From_File extends Shape {                                   /
                         unpacked.verts.push(+verts[(vertex[0] - 1) * 3 + 2]);
 
                         if (textures.length) {
-                            unpacked.textures.push(+textures[((vertex[1] - 1) || vertex[0]) * 2 + 0]);
-                            unpacked.textures.push(+textures[((vertex[1] - 1) || vertex[0]) * 2 + 1]);
+                            unpacked.textures.push(+textures[((vertex[1] - 1) || vertex[0]) * texture_coord_dim + 0]);
+                            unpacked.textures.push(+textures[((vertex[1] - 1) || vertex[0]) * texture_coord_dim + 1]);
                         }
 
                         unpacked.norms.push(+vertNormals[((vertex[2] - 1) || vertex[0]) * 3 + 0]);
