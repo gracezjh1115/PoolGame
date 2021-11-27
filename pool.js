@@ -6,7 +6,7 @@ import {Shape_From_File} from './examples/obj-file-demo.js'
 // Pull these names into this module's scope for convenience:
 const {vec, vec3, unsafe3, vec4, color, hex_color, Mat4, Light, Shape, Material, Shader, Texture, Scene} = tiny;
 
-const {Textured_Phong} = defs
+const {Textured_Phong, Phong_Shader} = defs
 
 export class Simulation extends Scene {
     // **Simulation** manages the stepping of simulation time.  Subclass it when making
@@ -88,6 +88,7 @@ export class Test_Data {
             grid: new Texture("assets/grid.png"),
             stars: new Texture("assets/stars.png"),
             text: new Texture("assets/text.png"),
+            club: new Texture("assets/club.jpg"),
         }
         this.shapes = {
             donut: new defs.Torus(15, 15, [[0, 2], [0, 1]]),
@@ -95,12 +96,12 @@ export class Test_Data {
             capped: new defs.Capped_Cylinder(4, 12, [[0, 2], [0, 1]]),
             ball: new defs.Subdivision_Sphere(4, [[0, 1], [0, 1]]),
             cube: new defs.Cube(),
+            square: new defs.Square(),
             prism: new (defs.Capped_Cylinder.prototype.make_flat_shaded_version())(10, 10, [[0, 2], [0, 1]]),
             gem: new (defs.Subdivision_Sphere.prototype.make_flat_shaded_version())(2),
             donut2: new (defs.Torus.prototype.make_flat_shaded_version())(20, 20, [[0, 2], [0, 1]]),
             //background
             //table 2: https://www.cgtrader.com/items/2816943
-            table: new Shape_From_File("assets/background/test_pool_table_texture/Untitiled.obj"),
             cuestick: new Shape_From_File("assets/background/cue_stick.obj"),
             tableLeg: new Shape_From_File("assets/background/table_decomposed/TableLeg.obj"),
             outerEdge: new Shape_From_File("assets/background/table_decomposed/OuterEdge.obj"),
@@ -149,9 +150,9 @@ export class Pool_Scene extends Simulation {
                 color: hex_color("#000000"),
                 ambient: .8, diffusivity: .5, specularity: .5, texture: new Texture("assets/map-saturation.png")
             }),
-            background: new Material(shader, {
-                color: hex_color("#ffffff"),
-                ambient: .4, texture: this.data.textures.earth
+            background: new Material(new defs.Textured_Phong(), {
+                color: hex_color("#000000"),
+                ambient: 1., texture: this.data.textures.club
             }),
             white_plastic: new Material(new defs.Phong_Shader(),
                 {ambient: .4, diffusivity: .6, color: hex_color("#ffffff")}),
@@ -159,17 +160,13 @@ export class Pool_Scene extends Simulation {
                 {ambient: .4, diffusivity: .6, color: hex_color("#ff0000")}),
             green_plastic: new Material(new defs.Phong_Shader(),
                 {ambient: .7, diffusivity: .3, specularity: 0, color: hex_color("#005500")}),
-            table_texture: new Material(new defs.Textured_Phong(), {
-                color: hex_color("#000000"),
-                ambient: 1., diffusivity: .1, specularity: 0, texture: new Texture("assets/background/test_pool_table_texture/Untitled.004.png")
-            }),
             table_leg_texture: new Material(new defs.Textured_Phong(), {
                 color: hex_color("#000000"),
-                ambient: 1., diffusivity: .1, specularity: 0.8, texture: new Texture("assets/background/table_decomposed/metalic.jpg")
+                ambient: 1., diffusivity: .8, specularity: 1., texture: new Texture("assets/background/table_decomposed/metalic.jpg")
             }),
             outer_edge_texture: new Material(new defs.Textured_Phong(), {
                 color: hex_color("#000000"),
-                ambient: 1., diffusivity: .1, specularity: 0, texture: new Texture("assets/background/table_decomposed/OuterEdge.png")
+                ambient: 1., diffusivity: .8, specularity: .9, texture: new Texture("assets/background/table_decomposed/OuterEdge.png")
             }),
             pocket_texture: new Material(new defs.Textured_Phong(), {
                 color: hex_color("#000000"),
@@ -177,12 +174,17 @@ export class Pool_Scene extends Simulation {
             }),
             inner_edge_texture: new Material(new defs.Textured_Phong(), {
                 color: hex_color("#000000"),
-                ambient: 1., diffusivity: .1, specularity: .5, texture: new Texture("assets/background/table_decomposed/InnerEdge.png")
+                ambient: 1., diffusivity: .9, specularity: .9, texture: new Texture("assets/background/table_decomposed/InnerEdge.png")
             }),
             plane_texture: new Material(new defs.Textured_Phong(), {
                 color: hex_color("#000000"),
-                ambient: 1., diffusivity: .1, specularity: .5, texture: new Texture("assets/background/table_decomposed/Plane.png")
+                ambient: 1., diffusivity: .8, specularity: .9, texture: new Texture("assets/background/table_decomposed/Plane.png")
             }),
+            floor_texture: new Material(new defs.Textured_Phong(), {
+                color: hex_color("#000000"),
+                ambient: .7, diffusivity: .8, specularity: .9, texture: new Texture("assets/background/floor.png")
+            }),
+            
 
         };
 
@@ -224,7 +226,11 @@ export class Pool_Scene extends Simulation {
         this.inner_edge_transformation = this.inner_edge_transformation.times(Mat4.translation(0,0.42,0)).times(Mat4.scale(1.01,1.01,1.01));
         this.plane_transformation = Mat4.identity();
         this.plane_transformation = this.plane_transformation.times(Mat4.translation(0,0.35,0)).times(Mat4.scale(.81,.8,.8));
-
+        
+        // light source
+        this.light_src = new Material(new Phong_Shader(), {
+            color: color(1, 1, 1, 1), ambient: 1, diffusivity: 0, specularity: 0
+        });
     }
 
     random_color() {
@@ -343,24 +349,49 @@ export class Pool_Scene extends Simulation {
             program_state.set_camera(this.camera_pos);    // Locate the camera here (inverted matrix).
         }
         program_state.projection_transform = Mat4.perspective(Math.PI / 4, context.width / context.height, 1, 500);
-        program_state.lights = [new Light(vec4(-10, 20, -20, 1), color(1, 1, 1, 1), 1000),
-                                new Light(vec4(-10, 20, 20, 1), color(1, 1, 1, 1), 1000),
-                                new Light(vec4(10, 20, -20, 1), color(1, 1, 1, 1), 1000),
-                                new Light(vec4(10, 20, 20, 1), color(1, 1, 1, 1), 1000)];
+
+
+        let t = this.t = program_state.animation_time;
+        // The position of the light
+        let light_position = this.light_position = Mat4.rotation(t /1500, 0, 1, 0).times(vec4(3, 6, 0, 1));
+        // The color of the light
+        let light_color = this.light_color = color(
+            0.667 + Math.sin(t/500) / 3,
+            0.667 + Math.sin(t/1500) / 3,
+            0.667 + Math.sin(t/3500) / 3,
+            1
+        );
+
+        // The parameters of the Light are: position, color, size
+        program_state.lights = [new Light(Mat4.translation(-10, 25, -30).times(light_position), this.light_color, 1000),
+                                new Light(Mat4.translation(-10, 25, 30).times(light_position), this.light_color, 1000),
+                                new Light(Mat4.translation(10, 25, -30).times(light_position), this.light_color, 1000),
+                                new Light(Mat4.translation(10, 25, 30).times(light_position), this.light_color, 1000)];
+        // draw the point lights
+        this.shapes.ball.draw(context, program_state,
+                Mat4.translation(light_position[0], light_position[1], light_position[2]).times(Mat4.translation(-10,25,-30)).times(Mat4.scale(5,5,5)),
+                this.light_src.override({color: light_color}));
+        this.shapes.ball.draw(context, program_state,
+                Mat4.translation(light_position[0], light_position[1], light_position[2]).times(Mat4.translation(-10,25,30)).times(Mat4.scale(5,5,5)),
+                this.light_src.override({color: light_color}));
+        this.shapes.ball.draw(context, program_state,
+                Mat4.translation(light_position[0], light_position[1], light_position[2]).times(Mat4.translation(10,25,-30)).times(Mat4.scale(5,5,5)),
+                this.light_src.override({color: light_color}));
+        this.shapes.ball.draw(context, program_state,
+                Mat4.translation(light_position[0], light_position[1], light_position[2]).times(Mat4.translation(10,25,30)).times(Mat4.scale(5,5,5)),
+                this.light_src.override({color: light_color}));
+       
+       
+
         super.display(context, program_state);
-        //draw the light
-        this.shapes.ball.draw(context, program_state, Mat4.translation(-10, 20, -20), this.materials.red_plastic)
-        this.shapes.ball.draw(context, program_state, Mat4.translation(-10, 20, 20), this.materials.red_plastic)
-        this.shapes.ball.draw(context, program_state, Mat4.translation(10, 20, -20), this.materials.red_plastic)
-        this.shapes.ball.draw(context, program_state, Mat4.translation(10, 20, 20), this.materials.red_plastic)
 
 
         // Draw the ground:
 
         // Draw the backgorund
         let tf = Mat4.translation(0,-10,0).times(Mat4.scale(100,100,100));
-        this.shapes.cube.draw(context, program_state, tf, this.materials.background);
-
+        this.shapes.cube.draw(context, program_state, Mat4.scale(100,100,100).times(Mat4.translation(0,0.2,0)), this.materials.background);
+        this.shapes.square.draw(context, program_state, Mat4.rotation(0.5*Math.PI,1,0,0).times(Mat4.scale(100,100,100)).times(Mat4.translation(0,0,0.21)), this.materials.floor_texture);
         // Draw the table
         tf = Mat4.rotation(Math.PI / 2, 0, 1, 0).times(Mat4.translation(0,-6.65,0)).times(Mat4.scale(30,30,30));
         //this.shapes.table.draw(context, program_state, tf, this.materials.table_texture);
