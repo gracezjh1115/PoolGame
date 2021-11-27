@@ -6,6 +6,8 @@ import {Shape_From_File} from './examples/obj-file-demo.js'
 // Pull these names into this module's scope for convenience:
 const {vec, vec3, unsafe3, vec4, color, hex_color, Mat4, Light, Shape, Material, Shader, Texture, Scene} = tiny;
 
+const {Textured_Phong} = defs
+
 export class Simulation extends Scene {
     // **Simulation** manages the stepping of simulation time.  Subclass it when making
     // a Scene that is a physics demo.  This technique is careful to totally decouple
@@ -98,9 +100,16 @@ export class Test_Data {
             donut2: new (defs.Torus.prototype.make_flat_shaded_version())(20, 20, [[0, 2], [0, 1]]),
             //background
             //table 2: https://www.cgtrader.com/items/2816943
-            pooltable: new Shape_From_File("assets/background/Pool_table2.obj"),
+            table: new Shape_From_File("assets/background/test_pool_table_texture/Untitiled.obj"),
             cuestick: new Shape_From_File("assets/background/cue_stick.obj"),
+            tableLeg: new Shape_From_File("assets/background/table_decomposed/TableLeg.obj"),
+            outerEdge: new Shape_From_File("assets/background/table_decomposed/OuterEdge.obj"),
+            pocket: new Shape_From_File("assets/background/table_decomposed/Pocket.obj"),
+            diamond: new Shape_From_File("assets/background/table_decomposed/Diamond.obj"),
+            innerEdge: new Shape_From_File("assets/background/table_decomposed/InnerEdge.obj"),
+            plane: new Shape_From_File("assets/background/table_decomposed/Plane.obj"),
         };
+
     }
 
     random_shape(shape_list = this.shapes) {
@@ -150,6 +159,30 @@ export class Pool_Scene extends Simulation {
                 {ambient: .4, diffusivity: .6, color: hex_color("#ff0000")}),
             green_plastic: new Material(new defs.Phong_Shader(),
                 {ambient: .7, diffusivity: .3, specularity: 0, color: hex_color("#005500")}),
+            table_texture: new Material(new defs.Textured_Phong(), {
+                color: hex_color("#000000"),
+                ambient: 1., diffusivity: .1, specularity: 0, texture: new Texture("assets/background/test_pool_table_texture/Untitled.004.png")
+            }),
+            table_leg_texture: new Material(new defs.Textured_Phong(), {
+                color: hex_color("#000000"),
+                ambient: 1., diffusivity: .1, specularity: 0.8, texture: new Texture("assets/background/table_decomposed/metalic.jpg")
+            }),
+            outer_edge_texture: new Material(new defs.Textured_Phong(), {
+                color: hex_color("#000000"),
+                ambient: 1., diffusivity: .1, specularity: 0, texture: new Texture("assets/background/table_decomposed/OuterEdge.png")
+            }),
+            pocket_texture: new Material(new defs.Textured_Phong(), {
+                color: hex_color("#000000"),
+                ambient: 1., diffusivity: .1, specularity: .5, texture: new Texture("assets/background/table_decomposed/PocketTexture.png")
+            }),
+            inner_edge_texture: new Material(new defs.Textured_Phong(), {
+                color: hex_color("#000000"),
+                ambient: 1., diffusivity: .1, specularity: .5, texture: new Texture("assets/background/table_decomposed/InnerEdge.png")
+            }),
+            plane_texture: new Material(new defs.Textured_Phong(), {
+                color: hex_color("#000000"),
+                ambient: 1., diffusivity: .1, specularity: .5, texture: new Texture("assets/background/table_decomposed/Plane.png")
+            }),
 
         };
 
@@ -175,8 +208,23 @@ export class Pool_Scene extends Simulation {
 
         // invisible walls to detect collision with the walls
 
-        this.walls_polygon = this.pm.walls.map((w) => new defs.Polygon(w))
-        this.pockets_cylinder = new defs.Capped_Cylinder(5, 20)
+        this.walls_polygon = this.pm.walls.map((w) => new defs.Polygon(w));
+        this.pockets_cylinder = new defs.Capped_Cylinder(5, 20);
+
+        // decomposed table models
+        this.table_leg_transformation = Mat4.identity();
+        this.table_leg_transformation = this.table_leg_transformation.times(Mat4.scale(1.1,1.05,1.05));
+        this.outer_edge_transformation = Mat4.identity();
+        this.outer_edge_transformation = this.outer_edge_transformation.times(Mat4.translation(0,0.35,0));
+        this.pocket_transformation = Mat4.identity();
+        this.pocket_transformation = this.pocket_transformation.times(Mat4.translation(0,0.35,0)).times(Mat4.scale(1.03,1.03,1.03));
+        this.diamond_transformation = Mat4.identity();
+        this.diamond_transformation = this.diamond_transformation.times(Mat4.translation(0,0.45,-0.01)).times(Mat4.scale(0.9,.9,.9));
+        this.inner_edge_transformation = Mat4.identity();
+        this.inner_edge_transformation = this.inner_edge_transformation.times(Mat4.translation(0,0.42,0)).times(Mat4.scale(1.01,1.01,1.01));
+        this.plane_transformation = Mat4.identity();
+        this.plane_transformation = this.plane_transformation.times(Mat4.translation(0,0.35,0)).times(Mat4.scale(.81,.8,.8));
+
     }
 
     random_color() {
@@ -308,15 +356,21 @@ export class Pool_Scene extends Simulation {
 
 
         // Draw the ground:
-        //Draw the table:
+
         // Draw the backgorund
         let tf = Mat4.translation(0,-10,0).times(Mat4.scale(100,100,100));
         this.shapes.cube.draw(context, program_state, tf, this.materials.background);
 
         // Draw the table
         tf = Mat4.rotation(Math.PI / 2, 0, 1, 0).times(Mat4.translation(0,-6.65,0)).times(Mat4.scale(30,30,30));
-        this.shapes.pooltable.draw(context, program_state, tf, this.materials.map_sat);
-
+        //this.shapes.table.draw(context, program_state, tf, this.materials.table_texture);
+        this.shapes.tableLeg.draw(context, program_state, Mat4.translation(0,-7,0).times(Mat4.scale(1,1,1.2)).times(tf), this.materials.table_leg_texture);
+        this.shapes.outerEdge.draw(context, program_state, Mat4.translation(0,3,0).times(Mat4.scale(1,1,1.05)).times(tf), this.materials.outer_edge_texture);
+        this.shapes.pocket.draw(context, program_state, Mat4.translation(0,3.4,0).times(Mat4.scale(1,1,1.04)).times(Mat4.scale(1.04,1.04,1.04)).times(tf), this.materials.pocket_texture);
+        this.shapes.diamond.draw(context, program_state, Mat4.translation(0,5.,0).times(Mat4.scale(.9,.9,0.95)).times(tf), this.materials.table_leg_texture);
+        this.shapes.innerEdge.draw(context, program_state, Mat4.translation(0,4.8,0).times(Mat4.scale(1,1,1.05)).times(Mat4.scale(1.01,1.01,1.01)).times(tf), this.materials.inner_edge_texture);
+        this.shapes.plane.draw(context, program_state, Mat4.translation(0,-1.7,0).times(Mat4.scale(.85,.85,0.87)).times(tf), this.materials.plane_texture);
+       
         // display invisible wall for testing
         const display_wall = true
         if (display_wall) {
