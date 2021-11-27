@@ -192,6 +192,10 @@ export class Pool_Scene extends Simulation {
         this.cueball_init_speed = 0;
         this.cueball_direction = vec3(0,0,0);
 
+        this.last_move = 0;
+        this.last_down = 0;
+        this.last_up = 0;
+
 
 
         // balls
@@ -404,43 +408,45 @@ export class Pool_Scene extends Simulation {
                     this.materials.white_plastic)
             }
         }
-
+        
+        console.log(this.game_state)
         // Draw the cuestick
         if (this.pm.all_bodies_static())
         {
-            //console.log(this.game_state)
+            
             // handling mouse interaction
             const mouse_position = (e, rect = canvas.getBoundingClientRect()) =>
                 vec((e.clientX - (rect.left + rect.right) / 2) / ((rect.right - rect.left) / 2),
                     (e.clientY - (rect.bottom + rect.top) / 2) / ((rect.top - rect.bottom) / 2));
             let canvas = context.canvas;
-            var last_move = 0;
-            var last_down = 0;
-            var last_up = 0;
+            if (this.game_state == 3)
+            {
+                this.game_state = 0;
+            }
+
             canvas.addEventListener("mousemove", e => {
-                if (Date.now() -last_move < 2000 || (this.game_state != 0 && this.game_state != 3))
+                if (Date.now() -this.last_move < 20 || (this.game_state != 0))
                 {
                     return;
                 }
-                last_move = Date.now();
-                this.game_state = 0;
+                this.last_move = Date.now();
 
                 e.preventDefault();
                 this.mouse_hover_cuestick(e, mouse_position(e), context, program_state);
             });
             canvas.addEventListener("mousedown", e => {
-                if (Date.now() -last_down > 200 || this.game_state == 0)
+                if (Date.now() - this.last_down > 200 && this.game_state == 0)
                 {
-                    last_down = Date.now();
+                    this.last_down = Date.now();
                     //console.log("down")
                     this.mouse_down(e, mouse_position(e), context, program_state);
                 }
 
             })
             canvas.addEventListener("mouseup", e => {
-                if (Date.now() -last_up > 200 && this.game_state == 1)
+                if (Date.now() - this.last_up > 200 && this.game_state == 1)
                 {
-                    last_up = Date.now();
+                    this.last_up = Date.now();
                     //console.log("up")
                     this.mouse_up(e, mouse_position(e), context, program_state);
                 }
