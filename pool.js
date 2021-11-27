@@ -185,7 +185,8 @@ export class Pool_Scene extends Simulation {
         this.collider = {intersect_test: Body.intersect_sphere, points: new defs.Subdivision_Sphere(2), leeway: .3};
         this.camera_pos = Mat4.look_at(vec3(0,70,0), vec3(0,0,0), vec3(1,0,0));
 
-        // 0 = selecting direction, 1 = selecting power, 2 = firing, 3 = balls moving
+        // 0 = selecting direction, 1 = selecting power, 2 = firing, 3 = balls moving, 4 = cueball missing, 5 = down for cueball 
+        // 
         this.game_state = 0;
         this.down_start = 0;
         this.power = 0;
@@ -207,14 +208,15 @@ export class Pool_Scene extends Simulation {
         }
         for (let p of initial_ball_position)
         {
-            this.pm.bodies.push(new Body(this.shapes.ball, this.materials.red_plastic, vec3(1,1,1), 0, 0.2)
+            this.pm.bodies.push(new Body(this.shapes.ball, this.materials.red_plastic, vec3(1,1,1), 0, 0.2, 'red')
                 .emplace(Mat4.translation(...p), vec3(0, 0, 0), 0));
         }
 
         // cueball
-        this.cueball = new Body(this.shapes.ball, this.materials.white_plastic, vec3(1,1,1), 0, 0.2)
+        this.cueball = new Body(this.shapes.ball, this.materials.white_plastic, vec3(1,1,1), 0, 0.2, 'cueball')
             .emplace(Mat4.translation(0, -5, -17), vec3(0, 0, 0), 0)
         this.pm.bodies.push(this.cueball)
+        this.cueball_in_bodies = true;
 //         this.cueball_pos = Mat4.translation(10,-5, 3);
 
         // cuestick
@@ -278,7 +280,7 @@ export class Pool_Scene extends Simulation {
         this.pm.bodies = this.pm.bodies.filter((b) => {
             let re = this.pm.check_all_pockets(b)
             if (re.removable) {
-                if (b.removal_callback) b.removal_callback()
+                this.removal_callback(b)
                 return false;
             }
             if (!re.captured) {
@@ -287,6 +289,16 @@ export class Pool_Scene extends Simulation {
             }
             return true;
         })
+    }
+
+    removal_callback(b)
+    {
+        let ball_type = b.type;
+        if (ball_type == "cueball")
+        {
+            this.game_state = 4;
+            this.cueball_in_bodies = false;
+        }
     }
 
     mouse_hover_cuestick(e, pos, context, program_state)
@@ -323,16 +335,56 @@ export class Pool_Scene extends Simulation {
 
     }
 
-    mouse_down(e, pos, context, program_state)
+    mouse_hover_cueball(e, pos, context, program_state)
+    {
+        let pos_ndc_near = vec4(pos[0], pos[1], -1.0, 1.0);
+        let pos_ndc_far  = vec4(pos[0], pos[1],  1.0, 1.0);
+        let center_ndc_near = vec4(0.0, 0.0, -1.0, 1.0);
+        let P = program_state.projection_transform;
+        let V = program_state.camera_inverse;
+        let pos_world_near = Mat4.inverse(P.times(V)).times(pos_ndc_near);
+        let pos_world_far  = Mat4.inverse(P.times(V)).times(pos_ndc_far);
+        let center_world_near  = Mat4.inverse(P.times(V)).times(center_ndc_near);
+        pos_world_near.scale_by(1 / pos_world_near[3]);
+        pos_world_far.scale_by(1 / pos_world_far[3]);
+        center_world_near.scale_by(1 / center_world_near[3]);
+
+        let cueball = pos_world_far.minus(pos_world_near);
+        cueball = pos_world_near.minus(cueball.times(1 / cueball[1] * (pos_world_near[1] + 5)));
+        cueball = cueball.to3();
+        
+        // pointing cuestick towards the direction of the mouse
+        if (this.cueball_in_bodies)
+        {
+            this.cueball.emplace(Mat4.translation(...cueball), vec3(0,0,0), 0);
+        }
+        else 
+        {
+            this.cueball.emplace(Mat4.translation(...cueball), vec3(0,0,0), 0);
+            this.pm.bodies.push(this.cueball);
+        }
+    }
+
+    mouse_down_cuestick(e, pos, context, program_state)
     {
         this.game_state = 1;
         this.down_start = this.steps_taken;
     }
 
-    mouse_up(e, pos, context, program_state)
+    mouse_down_cueball(e, pos, context, program_state)
+    {
+        this.game_state = 5;
+    }
+
+    mouse_up_cuestick(e, pos, context, program_state)
     {
         this.game_state = 2;
         this.cueball_init_speed = (this.steps_taken - this.down_start) * 0.1;
+    }
+
+    mouse_up_cueball(e, pos, context, program_state)
+    {
+        this.game_state = 3;
     }
 
     display(context, program_state) {
@@ -425,30 +477,52 @@ export class Pool_Scene extends Simulation {
             }
 
             canvas.addEventListener("mousemove", e => {
-                if (Date.now() -this.last_move < 20 || (this.game_state != 0))
+                if (Date.now() -this.last_move < 40 || (this.game_state != 0 && this.game_state != 4))
                 {
                     return;
                 }
                 this.last_move = Date.now();
 
                 e.preventDefault();
-                this.mouse_hover_cuestick(e, mouse_position(e), context, program_state);
+                if (this.game_state == 0)
+                {
+                    this.mouse_hover_cuestick(e, mouse_position(e), context, program_state);                    
+                }
+                else if (this.game_state == 4)
+                {
+                    this.mouse_hover_cueball(e, mouse_position(e), context, program_state);
+                }
             });
             canvas.addEventListener("mousedown", e => {
-                if (Date.now() - this.last_down > 200 && this.game_state == 0)
+                if (Date.now() - this.last_down > 200 && (this.game_state == 0 || this.game_state == 4))
                 {
                     this.last_down = Date.now();
                     //console.log("down")
-                    this.mouse_down(e, mouse_position(e), context, program_state);
+                    if (this.game_state == 0)
+                    {
+                        this.mouse_down_cuestick(e, mouse_position(e), context, program_state);
+                    }
+                    else if (this.game_state == 4)
+                    {
+                        this.mouse_down_cueball(e, mouse_position(e), context, program_state);
+                    }
                 }
 
             })
             canvas.addEventListener("mouseup", e => {
-                if (Date.now() - this.last_up > 200 && this.game_state == 1)
+                if (Date.now() - this.last_up > 20 && (this.game_state == 1 || this.game_state == 5))
                 {
                     this.last_up = Date.now();
                     //console.log("up")
-                    this.mouse_up(e, mouse_position(e), context, program_state);
+                    if (this.game_state == 1)
+                    {
+                        this.mouse_up_cuestick(e, mouse_position(e), context, program_state);
+                    }
+                    else if (this.game_state == 5)
+                    {
+                        this.mouse_up_cueball(e, mouse_position(e), context, program_state);
+                    }
+
                 }
 
             })
