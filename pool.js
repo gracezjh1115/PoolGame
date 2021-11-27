@@ -1,7 +1,7 @@
 import {defs, tiny} from './src/common.js';
 import {Body} from "./src/body.js";
 import {Physics} from "./src/physics.js"
-import {Shape_From_File} from './examples/obj-file-demo.js'
+import {ShapesFromObject, Shape_From_File} from "./src/ShapesFromObject.js";
 
 // Pull these names into this module's scope for convenience:
 const {vec, vec3, unsafe3, vec4, color, hex_color, Mat4, Light, Shape, Material, Shader, Texture, Scene} = tiny;
@@ -89,61 +89,13 @@ export class Test_Data {
             stars: new Texture("assets/stars.png"),
             text: new Texture("assets/text.png"),
         }
-        this.shapes = {
-            donut: new defs.Torus(15, 15, [[0, 2], [0, 1]]),
-            cone: new defs.Closed_Cone(4, 10, [[0, 2], [0, 1]]),
-            capped: new defs.Capped_Cylinder(4, 12, [[0, 2], [0, 1]]),
-            ball: new defs.Subdivision_Sphere(4, [[0, 1], [0, 1]]),
-            cube: new defs.Cube(),
-            prism: new (defs.Capped_Cylinder.prototype.make_flat_shaded_version())(10, 10, [[0, 2], [0, 1]]),
-            gem: new (defs.Subdivision_Sphere.prototype.make_flat_shaded_version())(2),
-            donut2: new (defs.Torus.prototype.make_flat_shaded_version())(20, 20, [[0, 2], [0, 1]]),
-            //background
-            //table 2: https://www.cgtrader.com/items/2816943
-            table: new Shape_From_File("assets/background/test_pool_table_texture/Untitiled.obj"),
-            cuestick: new Shape_From_File("assets/background/cue_stick.obj"),
-            tableLeg: new Shape_From_File("assets/background/table_decomposed/TableLeg.obj"),
-            outerEdge: new Shape_From_File("assets/background/table_decomposed/OuterEdge.obj"),
-            pocket: new Shape_From_File("assets/background/table_decomposed/Pocket.obj"),
-            diamond: new Shape_From_File("assets/background/table_decomposed/Diamond.obj"),
-            innerEdge: new Shape_From_File("assets/background/table_decomposed/InnerEdge.obj"),
-            plane: new Shape_From_File("assets/background/table_decomposed/Plane.obj"),
-        };
-
-    }
-
-    random_shape(shape_list = this.shapes) {
-        // random_shape():  Extract a random shape from this.shapes.
-        const shape_names = Object.keys(shape_list);
-        return shape_list[shape_names[~~(shape_names.length * Math.random())]]
-    }
-}
-
-export class Pool_Scene extends Simulation {
-    // ** Inertia_Demo** demonstration: This scene lets random initial momentums
-    // carry several bodies until they fall due to gravity and bounce.
-    constructor() {
-        super();
-        this.data = new Test_Data();
-        this.shapes = Object.assign({}, this.data.shapes);
-        this.shapes.square = new defs.Square();
-        this.collider = {intersect_test: Body.intersect_sphere, points: new defs.Subdivision_Sphere(2), leeway: .3};
-        this.camera_pos = Mat4.look_at(vec3(0,70,0), vec3(0,0,0), vec3(1,0,0));
-        
-        // 0 = selecting direction, 1 = selecting power, 2 = firing, 3 = balls moving 
-        this.game_state = 0;
-        this.down_start = 0;
-        this.power = 0;
-        this.cueball_init_speed = 0;
-        this.cueball_direction = vec3(0,0,0);
-      
 
         const shader = new defs.Fake_Bump_Map(1);
 
         this.materials = {
             stars: new Material(shader, {
                 color: hex_color("#eeeee4"),
-                ambient: .4, texture: this.data.textures.stars
+                ambient: .4, texture: this.textures.stars
             }),
             map_sat : new Material(new defs.Textured_Phong(1), {
                 color: hex_color("#000000"),
@@ -151,7 +103,7 @@ export class Pool_Scene extends Simulation {
             }),
             background: new Material(shader, {
                 color: hex_color("#ffffff"),
-                ambient: .4, texture: this.data.textures.earth
+                ambient: .4, texture: this.textures.earth
             }),
             white_plastic: new Material(new defs.Phong_Shader(),
                 {ambient: .4, diffusivity: .6, color: hex_color("#ffffff")}),
@@ -186,6 +138,65 @@ export class Pool_Scene extends Simulation {
 
         };
 
+        this.shapes = {
+            donut: new defs.Torus(15, 15, [[0, 2], [0, 1]]),
+            cone: new defs.Closed_Cone(4, 10, [[0, 2], [0, 1]]),
+            capped: new defs.Capped_Cylinder(4, 12, [[0, 2], [0, 1]]),
+            ball: new defs.Subdivision_Sphere(4, [[0, 1], [0, 1]]),
+            cube: new defs.Cube(),
+            prism: new (defs.Capped_Cylinder.prototype.make_flat_shaded_version())(10, 10, [[0, 2], [0, 1]]),
+            gem: new (defs.Subdivision_Sphere.prototype.make_flat_shaded_version())(2),
+            donut2: new (defs.Torus.prototype.make_flat_shaded_version())(20, 20, [[0, 2], [0, 1]]),
+            cuestick: new Shape_From_File("assets/background/cue_stick.obj"),
+            //background
+            //table 2: https://www.cgtrader.com/items/2816943
+            pooltable: new ShapesFromObject(["assets/background/table_decomposed/TableLeg.obj",
+                "assets/background/table_decomposed/OuterEdge.obj",
+                "assets/background/table_decomposed/Pocket.obj",
+                "assets/background/table_decomposed/Diamond.obj",
+                "assets/background/table_decomposed/InnerEdge.obj",
+                "assets/background/table_decomposed/Plane.obj"],
+                [this.materials.table_leg_texture,
+                this.materials.outer_edge_texture,
+                this.materials.pocket_texture,
+                this.materials.table_leg_texture,
+                this.materials.inner_edge_texture,
+                this.materials.plane_texture]),
+            tableLeg: new Shape_From_File("assets/background/table_decomposed/TableLeg.obj", false),
+            outerEdge: new Shape_From_File("assets/background/table_decomposed/OuterEdge.obj", false),
+            pocket: new Shape_From_File("assets/background/table_decomposed/Pocket.obj", false),
+            diamond: new Shape_From_File("assets/background/table_decomposed/Diamond.obj", false),
+            innerEdge: new Shape_From_File("assets/background/table_decomposed/InnerEdge.obj", false),
+            plane: new Shape_From_File("assets/background/table_decomposed/Plane.obj", false),
+        };
+    }
+
+    random_shape(shape_list = this.shapes) {
+        // random_shape():  Extract a random shape from this.shapes.
+        const shape_names = Object.keys(shape_list);
+        return shape_list[shape_names[~~(shape_names.length * Math.random())]]
+    }
+}
+
+export class Pool_Scene extends Simulation {
+    // ** Inertia_Demo** demonstration: This scene lets random initial momentums
+    // carry several bodies until they fall due to gravity and bounce.
+    constructor() {
+        super();
+        this.data = new Test_Data();
+        this.shapes = Object.assign({}, this.data.shapes);
+        this.materials = Object.assign({}, this.data.materials);
+        this.shapes.square = new defs.Square();
+        this.collider = {intersect_test: Body.intersect_sphere, points: new defs.Subdivision_Sphere(2), leeway: .3};
+        this.camera_pos = Mat4.look_at(vec3(0,70,0), vec3(0,0,0), vec3(1,0,0));
+        
+        // 0 = selecting direction, 1 = selecting power, 2 = firing, 3 = balls moving 
+        this.game_state = 0;
+        this.down_start = 0;
+        this.power = 0;
+        this.cueball_init_speed = 0;
+        this.cueball_direction = vec3(0,0,0);
+
 
 
         // balls
@@ -210,20 +221,6 @@ export class Pool_Scene extends Simulation {
 
         this.walls_polygon = this.pm.walls.map((w) => new defs.Polygon(w));
         this.pockets_cylinder = new defs.Capped_Cylinder(5, 20);
-
-        // decomposed table models
-        this.table_leg_transformation = Mat4.identity();
-        this.table_leg_transformation = this.table_leg_transformation.times(Mat4.scale(1.1,1.05,1.05));
-        this.outer_edge_transformation = Mat4.identity();
-        this.outer_edge_transformation = this.outer_edge_transformation.times(Mat4.translation(0,0.35,0));
-        this.pocket_transformation = Mat4.identity();
-        this.pocket_transformation = this.pocket_transformation.times(Mat4.translation(0,0.35,0)).times(Mat4.scale(1.03,1.03,1.03));
-        this.diamond_transformation = Mat4.identity();
-        this.diamond_transformation = this.diamond_transformation.times(Mat4.translation(0,0.45,-0.01)).times(Mat4.scale(0.9,.9,.9));
-        this.inner_edge_transformation = Mat4.identity();
-        this.inner_edge_transformation = this.inner_edge_transformation.times(Mat4.translation(0,0.42,0)).times(Mat4.scale(1.01,1.01,1.01));
-        this.plane_transformation = Mat4.identity();
-        this.plane_transformation = this.plane_transformation.times(Mat4.translation(0,0.35,0)).times(Mat4.scale(.81,.8,.8));
 
     }
 
@@ -364,12 +361,7 @@ export class Pool_Scene extends Simulation {
         // Draw the table
         tf = Mat4.rotation(Math.PI / 2, 0, 1, 0).times(Mat4.translation(0,-6.65,0)).times(Mat4.scale(30,30,30));
         //this.shapes.table.draw(context, program_state, tf, this.materials.table_texture);
-        this.shapes.tableLeg.draw(context, program_state, Mat4.translation(0,-7,0).times(Mat4.scale(1,1,1.2)).times(tf), this.materials.table_leg_texture);
-        this.shapes.outerEdge.draw(context, program_state, Mat4.translation(0,3,0).times(Mat4.scale(1,1,1.05)).times(tf), this.materials.outer_edge_texture);
-        this.shapes.pocket.draw(context, program_state, Mat4.translation(0,3.4,0).times(Mat4.scale(1,1,1.04)).times(Mat4.scale(1.04,1.04,1.04)).times(tf), this.materials.pocket_texture);
-        this.shapes.diamond.draw(context, program_state, Mat4.translation(0,5.,0).times(Mat4.scale(.9,.9,0.95)).times(tf), this.materials.table_leg_texture);
-        this.shapes.innerEdge.draw(context, program_state, Mat4.translation(0,4.8,0).times(Mat4.scale(1,1,1.05)).times(Mat4.scale(1.01,1.01,1.01)).times(tf), this.materials.inner_edge_texture);
-        this.shapes.plane.draw(context, program_state, Mat4.translation(0,-1.7,0).times(Mat4.scale(.85,.85,0.87)).times(tf), this.materials.plane_texture);
+        this.shapes.pooltable.draw(context, program_state, tf);
        
         // display invisible wall for testing
         const display_wall = true
