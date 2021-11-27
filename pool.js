@@ -195,17 +195,21 @@ export class Pool_Scene extends Simulation {
 
 
         // balls
-        let z = 10;
-        for (let i = 0; i < 9; i++)
+        let initial_ball_position = []
+        for (let i = 0; i < 4; i ++) {
+            for (let j = 0; j < i + 1; j ++) {
+                initial_ball_position.push([1.02 * i - 2.04 * j, -5, 17 + 1.02 * Math.sqrt(3) * i])
+            }
+        }
+        for (let p of initial_ball_position)
         {
             this.pm.bodies.push(new Body(this.shapes.ball, this.materials.red_plastic, vec3(1,1,1), 0, 0.2)
-                .emplace(Mat4.translation(5, -5, z), vec3(4, 0, 4), 0));
-            z -= 2.5
+                .emplace(Mat4.translation(...p), vec3(0, 0, 0), 0));
         }
 
         // cueball
         this.cueball = new Body(this.shapes.ball, this.materials.white_plastic, vec3(1,1,1), 0, 0.2)
-            .emplace(Mat4.translation(10, -5, 3), vec3(0, 0, 0), 0)
+            .emplace(Mat4.translation(0, -5, -17), vec3(0, 0, 0), 0)
         this.pm.bodies.push(this.cueball)
 //         this.cueball_pos = Mat4.translation(10,-5, 3);
 
