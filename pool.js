@@ -353,6 +353,11 @@ export class Pool_Scene extends Simulation {
         cueball = pos_world_near.minus(cueball.times(1 / cueball[1] * (pos_world_near[1] + 5)));
         cueball = cueball.to3();
         
+        cueball[0] = Math.max(cueball[0], -15.5);
+        cueball[0] = Math.min(cueball[0], 15.5);
+        cueball[2] = Math.max(cueball[2], -32.0);
+        cueball[2] = Math.min(cueball[2], 32.0);
+        
         // pointing cuestick towards the direction of the mouse
         if (this.cueball_in_bodies)
         {
