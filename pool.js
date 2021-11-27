@@ -196,7 +196,7 @@ export class Pool_Scene extends Simulation {
 
         // balls
         let initial_ball_position = []
-        for (let i = 0; i < 4; i ++) {
+        for (let i = 0; i < 5; i ++) {
             for (let j = 0; j < i + 1; j ++) {
                 initial_ball_position.push([1.02 * i - 2.04 * j, -5, 17 + 1.02 * Math.sqrt(3) * i])
             }
