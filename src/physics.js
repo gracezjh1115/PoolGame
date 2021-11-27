@@ -16,26 +16,40 @@ export class Physics {
 
         //sides
         this.walls = [];
-        this.walls.push([vec3(15, -8, -25), vec3(15, -8, -2), vec3(15, -2, -2), vec3(15, -2, -25)]);
-        this.walls.push([vec3(15, -8, 2), vec3(15, -8, 25), vec3(15, -2, 25), vec3(15, -2, 2)]);
-        this.walls.push([vec3(-15, -8, -25), vec3(-15, -8, -2), vec3(-15, -2, -2), vec3(-15, -2, -25)]);
-        this.walls.push([vec3(-15, -8, 2), vec3(-15, -8, 25), vec3(-15, -2, 25), vec3(-15, -2, 2)]);
-        this.walls.push([vec3(-15, -8, -25), vec3(15, -8, -25), vec3(15, -2, -25), vec3(-15, -2, -25)]);
-        this.walls.push([vec3(-15, -8, 25), vec3(15, -8, 25), vec3(15, -2, 25), vec3(-15, -2, 25)]);
+        this.walls.push([vec3(16.5, -8, -30.35), vec3(16.5, -8, -2.2), vec3(16.5, -2, -2.2), vec3(16.5, -2, -30.35)]);
+        this.walls.push([vec3(16.5, -8, 2.2), vec3(16.5, -8, 30.35), vec3(16.5, -2, 30.35), vec3(16.5, -2, 2.2)]);
+        this.walls.push([vec3(-16.5, -8, -30.35), vec3(-16.5, -8, -2.2), vec3(-16.5, -2, -2.2), vec3(-16.5, -2, -30.35)]);
+        this.walls.push([vec3(-16.5, -8, 2.2), vec3(-16.5, -8, 30.35), vec3(-16.5, -2, 30.35), vec3(-16.5, -2, 2.2)]);
+        this.walls.push([vec3(-13.9, -8, -32.9), vec3(13.9, -8, -32.9), vec3(13.9, -2, -32.9), vec3(-13.9, -2, -32.9)]);
+        this.walls.push([vec3(-13.9, -8, 32.9), vec3(13.9, -8, 32.9), vec3(13.9, -2, 32.9), vec3(-13.9, -2, 32.9)]);
 
         //pocket sides
-        this.walls.push([vec3(17, -8, -2), vec3(15, -8, -2), vec3(15, -2, -2), vec3(17, -2, -2)]);
-        this.walls.push([vec3(17, -8,  2), vec3(15, -8,  2), vec3(15, -2,  2), vec3(17, -2,  2)]);
-        this.walls.push([vec3(-17, -8, -2), vec3(-15, -8, -2), vec3(-15, -2, -2), vec3(-17, -2, -2)]);
-        this.walls.push([vec3(-17, -8,  2), vec3(-15, -8,  2), vec3(-15, -2,  2), vec3(-17, -2,  2)]);
+        this.walls.push([vec3(17.7, -8, -1.7), vec3(16.5, -8, -2.2), vec3(16.5, -2, -2.2), vec3(17.7, -2, -1.7)]);
+        this.walls.push([vec3(17.7, -8,  1.7), vec3(16.5, -8,  2.2), vec3(16.5, -2,  2.2), vec3(17.7, -2,  1.7)]);
+        this.walls.push([vec3(-17.7, -8, -1.7), vec3(-16.5, -8, -2.2), vec3(-16.5, -2, -2.2), vec3(-17.7, -2, -1.7)]);
+        this.walls.push([vec3(-17.7, -8,  1.7), vec3(-16.5, -8,  2.2), vec3(-16.5, -2,  2.2), vec3(-17.7, -2,  1.7)]);
+
+        this.walls.push([vec3(18.1, -8, -32), vec3(16.5, -8, -30.35), vec3(16.5, -2, -30.35), vec3(18.1, -2, -32)]);
+        this.walls.push([vec3(18.1, -8,  32), vec3(16.5, -8,  30.35), vec3(16.5, -2,  30.35), vec3(18.1, -2,  32)]);
+        this.walls.push([vec3(-18.1, -8, -32), vec3(-16.5, -8, -30.35), vec3(-16.5, -2, -30.35), vec3(-18.1, -2, -32)]);
+        this.walls.push([vec3(-18.1, -8,  32), vec3(-16.5, -8,  30.35), vec3(-16.5, -2,  30.35), vec3(-18.1, -2,  32)]);
+
+        this.walls.push([vec3(15.66, -8, -34.5), vec3(13.9, -8, -32.9), vec3(13.9, -2, -32.9), vec3(15.66, -2, -34.5)]);
+        this.walls.push([vec3(15.66, -8,  34.5), vec3(13.9, -8,  32.9), vec3(13.9, -2,  32.9), vec3(15.66, -2,  34.5)]);
+        this.walls.push([vec3(-15.66, -8, -34.5), vec3(-13.9, -8, -32.9), vec3(-13.9, -2, -32.9), vec3(-15.66, -2, -34.5)]);
+        this.walls.push([vec3(-15.66, -8,  34.5), vec3(-13.9, -8,  32.9), vec3(-13.9, -2,  32.9), vec3(-15.66, -2,  34.5)]);
 
         this.edges = this.get_wall_vertical_edges()
 
-        this.pocketRadius = 1.5
+        this.pocketRadius = 1.7
         this.ballCenterHeight = -5
         this.pockets = []
-        this.pockets.push(vec3(-17, this.ballCenterHeight, 0))
-        this.pockets.push(vec3(17, this.ballCenterHeight, 0))
+        this.pockets.push(vec3(-18.3, this.ballCenterHeight, 0))
+        this.pockets.push(vec3(18.3, this.ballCenterHeight, 0))
+        this.pockets.push(vec3(-17.1, this.ballCenterHeight, 33.6))
+        this.pockets.push(vec3(17.1, this.ballCenterHeight, 33.6))
+        this.pockets.push(vec3(-17.1, this.ballCenterHeight, -33.6))
+        this.pockets.push(vec3(17.1, this.ballCenterHeight, -33.6))
     }
 
     get_wall_vertical_edges() {
