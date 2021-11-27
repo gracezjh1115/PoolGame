@@ -197,7 +197,11 @@ export class Pool_Scene extends Simulation {
         this.last_down = 0;
         this.last_up = 0;
 
-
+        // players
+        this.player0_score = 0;
+        this.player1_score = 0;
+        this.turn0 = true;
+        this.ball_down = false;
 
         // balls
         let initial_ball_position = []
@@ -298,6 +302,17 @@ export class Pool_Scene extends Simulation {
         {
             this.game_state = 4;
             this.cueball_in_bodies = false;
+        }
+        else
+        {
+            if (this.turn0 == 0)
+            {
+                this.player0_score += 1;
+            }
+            else
+            {
+                this.player1_score += 1;
+            }
         }
     }
 
@@ -466,11 +481,13 @@ export class Pool_Scene extends Simulation {
             }
         }
         
-        console.log(this.game_state)
         // Draw the cuestick
         if (this.pm.all_bodies_static())
         {
-            
+            if (!this.ball_down)
+            {
+                this.turn0 = ~this.turn0;
+            }
             // handling mouse interaction
             const mouse_position = (e, rect = canvas.getBoundingClientRect()) =>
                 vec((e.clientX - (rect.left + rect.right) / 2) / ((rect.right - rect.left) / 2),
