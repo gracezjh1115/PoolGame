@@ -201,6 +201,7 @@ export class Pool_Scene extends Simulation {
         this.player0_score = 0;
         this.player1_score = 0;
         this.turn0 = true;
+        this.turn_str = "player 0";
         this.ball_down = false;
 
         // balls
@@ -234,6 +235,19 @@ export class Pool_Scene extends Simulation {
         // light source
         this.light_src = new Material(new Phong_Shader(), {
             color: color(1, 1, 1, 1), ambient: 1, diffusivity: 0, specularity: 0
+        });
+    }
+
+    make_control_panel()
+    {
+        super.make_control_panel();
+        this.new_line();
+        this.live_string(box => {
+            box.textContent = this.turn_str + "'s turn to play"
+        })
+        this.new_line();
+        this.live_string(box => {
+            box.textContent = "Player 0: " + this.player0_score + " vs. Player 1: " + this.player1_score
         });
     }
 
@@ -296,7 +310,8 @@ export class Pool_Scene extends Simulation {
     }
 
     removal_callback(b)
-    {
+    {   
+        this.ball_down = true;
         let ball_type = b.type;
         if (ball_type == "cueball")
         {
@@ -305,7 +320,7 @@ export class Pool_Scene extends Simulation {
         }
         else
         {
-            if (this.turn0 == 0)
+            if (this.turn0)
             {
                 this.player0_score += 1;
             }
@@ -484,10 +499,20 @@ export class Pool_Scene extends Simulation {
         // Draw the cuestick
         if (this.pm.all_bodies_static())
         {
-            if (!this.ball_down)
+            console.log(this.turn0);
+            if (this.game_state == 3 && !this.ball_down)
             {
-                this.turn0 = ~this.turn0;
+                this.turn0 = !this.turn0;
+                if (this.turn0)
+                {
+                    this.turn_str = "player 0";
+                }
+                else
+                {
+                    this.turn_str = "player 1";
+                }
             }
+            this.ball_down = false;
             // handling mouse interaction
             const mouse_position = (e, rect = canvas.getBoundingClientRect()) =>
                 vec((e.clientX - (rect.left + rect.right) / 2) / ((rect.right - rect.left) / 2),
@@ -512,6 +537,7 @@ export class Pool_Scene extends Simulation {
                 }
                 else if (this.game_state == 4)
                 {
+                    this.turn0 = ~this.turn0;
                     this.mouse_hover_cueball(e, mouse_position(e), context, program_state);
                 }
             });
