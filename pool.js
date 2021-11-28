@@ -2,6 +2,8 @@ import {defs, tiny} from './src/common.js';
 import {Body} from "./src/body.js";
 import {Physics} from "./src/physics.js"
 import {ShapesFromObject, Shape_From_File} from "./src/ShapesFromObject.js";
+import {Color_Phong_Shader, Shadow_Textured_Phong_Shader,
+    Depth_Texture_Shader_2D, Buffered_Texture, LIGHT_DEPTH_TEX_SIZE} from './examples/shadow-demo-shaders.js'
 
 // Pull these names into this module's scope for convenience:
 const {vec, vec3, unsafe3, vec4, color, hex_color, Mat4, Light, Shape, Material, Shader, Texture, Scene} = tiny;
@@ -14,6 +16,7 @@ export class Simulation extends Scene {
     // the simulation from the frame rate (see below).
     constructor() {
         super();
+        this.logo = false;
         this.pm = new Physics();
         Object.assign(this, {time_accumulator: 0, time_scale: 1, t: 0, dt: 1 / 20, bodies: [], steps_taken: 0});
     }
@@ -47,17 +50,23 @@ export class Simulation extends Scene {
 
     make_control_panel() {
         // make_control_panel(): Create the buttons for interacting with simulation time.
+        this.key_triggered_button("Show team logo decoration", ["l"], () => this.logo = !(this.logo));
+        this.new_line();
+        
         this.key_triggered_button("Speed up time", ["Shift", "T"], () => this.time_scale *= 5);
         this.key_triggered_button("Slow down time", ["t"], () => this.time_scale /= 5);
         this.new_line();
+        
         this.live_string(box => {
             box.textContent = "Time scale: " + this.time_scale
         });
         this.new_line();
+        
         this.live_string(box => {
             box.textContent = "Fixed simulation time step size: " + this.dt
         });
         this.new_line();
+        
         this.live_string(box => {
             box.textContent = this.steps_taken + " timesteps were taken so far."
         });
@@ -94,10 +103,18 @@ export class Test_Data {
         const shader = new defs.Fake_Bump_Map(1);
 
         this.materials = {
-            stars: new Material(shader, {
-                color: hex_color("#eeeee4"),
-                ambient: .4, texture: this.textures.stars
+            stars: new Material(new Shadow_Textured_Phong_Shader(1), {
+                color: hex_color("#ffffff"),
+                ambient: .4, diffusivity: .5, specularity: .5, 
+                color_texture: this.textures.stars,
+                light_depth_texture: null
             }),
+            floor: new Material(new Shadow_Textured_Phong_Shader(1), {
+                color: color(1, 1, 1, 1), ambient: .3, diffusivity: 0.6, specularity: 0.4, smoothness: 64,
+                color_texture: null,
+                light_depth_texture: null
+            }),
+            pure: new Material(new Color_Phong_Shader(), {}),
             map_sat : new Material(new defs.Textured_Phong(1), {
                 color: hex_color("#000000"),
                 ambient: .8, diffusivity: .5, specularity: .5, texture: new Texture("assets/map-saturation.png")
@@ -126,15 +143,20 @@ export class Test_Data {
             }),
             inner_edge_texture: new Material(new defs.Textured_Phong(), {
                 color: hex_color("#000000"),
-                ambient: 1., diffusivity: .9, specularity: .9, texture: new Texture("assets/background/table_decomposed/InnerEdge.png")
+                ambient: .3, diffusivity: .6, specularity: .4, 
+                color_texture: new Texture("assets/background/table_decomposed/InnerEdge.png")
             }),
-            plane_texture: new Material(new defs.Textured_Phong(), {
-                color: hex_color("#000000"),
-                ambient: 1., diffusivity: .8, specularity: .9, texture: new Texture("assets/background/table_decomposed/Plane.png")
+            plane_texture: new Material(new Shadow_Textured_Phong_Shader(1), {
+                color: hex_color("#002200"),
+                ambient: 1., diffusivity: .8, specularity: .9, color_texture: new Texture("assets/background/table_decomposed/Plane.png"), light_depth_texture: null
             }),
-            floor_texture: new Material(new defs.Textured_Phong(), {
+            floor_texture: new Material(new Shadow_Textured_Phong_Shader(1), {
                 color: hex_color("#000000"),
-                ambient: .7, diffusivity: .8, specularity: .9, texture: new Texture("assets/background/floor.png")
+                ambient: .7, diffusivity: .8, specularity: .9, color_texture: new Texture("assets/background/floor.png"), light_depth_texture: null
+            }),
+            bruin_texture: new Material(new Shadow_Textured_Phong_Shader(1), {
+                color: hex_color("#000000"),
+                ambient: .7, diffusivity: .8, specularity: .9, color_texture: new Texture("assets/bruin.png"), light_depth_texture: null
             }),
         };
 
@@ -192,7 +214,9 @@ export class Pool_Scene extends Simulation {
         this.cueball_init_speed = 0;
         this.cueball_direction = vec3(0,0,0);
 
-
+        // shadowing
+        this.shadow_pass = false;
+        this.init_ok = false;
 
         // balls
         let initial_ball_position = []
@@ -331,65 +355,107 @@ export class Pool_Scene extends Simulation {
         this.cueball_init_speed = (this.steps_taken - this.down_start) * 0.1;
     }
 
-    display(context, program_state) {
-        // display(): Draw everything else in the scene besides the moving bodies.
+    // referred to: Wuyue Lu sample code in shadow-demo.js
+    texture_buffer_init(gl) {
+        // Depth Texture
+        this.lightDepthTexture = gl.createTexture();
+        // Bind it to TinyGraphics
+        this.light_depth_texture = new Buffered_Texture(this.lightDepthTexture);
+        this.materials.stars.light_depth_texture = this.light_depth_texture
+        this.materials.floor.light_depth_texture = this.light_depth_texture
 
-        //first, draw everything inherit from parent class, all the moving objects in this case
+        this.lightDepthTextureSize = LIGHT_DEPTH_TEX_SIZE;
+        gl.bindTexture(gl.TEXTURE_2D, this.lightDepthTexture);
+        gl.texImage2D(
+            gl.TEXTURE_2D,      // target
+            0,                  // mip level
+            gl.DEPTH_COMPONENT, // internal format
+            this.lightDepthTextureSize,   // width
+            this.lightDepthTextureSize,   // height
+            0,                  // border
+            gl.DEPTH_COMPONENT, // format
+            gl.UNSIGNED_INT,    // type
+            null);              // data
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
+        // Depth Texture Buffer
+        this.lightDepthFramebuffer = gl.createFramebuffer();
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this.lightDepthFramebuffer);
+        gl.framebufferTexture2D(
+            gl.FRAMEBUFFER,       // target
+            gl.DEPTH_ATTACHMENT,  // attachment point
+            gl.TEXTURE_2D,        // texture target
+            this.lightDepthTexture,         // texture
+            0);                   // mip level
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
-        if (!context.scratchpad.controls) {
-            this.children.push(context.scratchpad.controls = new defs.Movement_Controls());
-            this.children.push(new defs.Program_State_Viewer());
-            program_state.set_camera(this.camera_pos);    // Locate the camera here (inverted matrix).
-        }
-        program_state.projection_transform = Mat4.perspective(Math.PI / 4, context.width / context.height, 1, 500);
-
-
-        let t = this.t = program_state.animation_time;
-        // The position of the light
-        let light_position = this.light_position = Mat4.rotation(t /1500, 0, 1, 0).times(vec4(3, 6, 0, 1));
-        // The color of the light
-        let light_color = this.light_color = color(
-            0.667 + Math.sin(t/500) / 3,
-            0.667 + Math.sin(t/1500) / 3,
-            0.667 + Math.sin(t/3500) / 3,
-            1
+        // create a color texture of the same size as the depth texture
+        // see article why this is needed_
+        this.unusedTexture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, this.unusedTexture);
+        gl.texImage2D(
+            gl.TEXTURE_2D,
+            0,
+            gl.RGBA,
+            this.lightDepthTextureSize,
+            this.lightDepthTextureSize,
+            0,
+            gl.RGBA,
+            gl.UNSIGNED_BYTE,
+            null,
         );
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        // attach it to the framebuffer
+        gl.framebufferTexture2D(
+            gl.FRAMEBUFFER,        // target
+            gl.COLOR_ATTACHMENT0,  // attachment point
+            gl.TEXTURE_2D,         // texture target
+            this.unusedTexture,         // texture
+            0);                    // mip level
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    }
 
-        // The parameters of the Light are: position, color, size
-        program_state.lights = [new Light(Mat4.translation(-10, 25, -30).times(light_position), this.light_color, 1000),
-            new Light(Mat4.translation(-10, 25, 30).times(light_position), this.light_color, 1000),
-            new Light(Mat4.translation(10, 25, -30).times(light_position), this.light_color, 1000),
-            new Light(Mat4.translation(10, 25, 30).times(light_position), this.light_color, 1000)];
-        // draw the point lights
-        this.shapes.ball.draw(context, program_state,
-            Mat4.translation(light_position[0], light_position[1], light_position[2]).times(Mat4.translation(-10,25,-30)).times(Mat4.scale(5,5,5)),
-            this.light_src.override({color: light_color}));
-        this.shapes.ball.draw(context, program_state,
-            Mat4.translation(light_position[0], light_position[1], light_position[2]).times(Mat4.translation(-10,25,30)).times(Mat4.scale(5,5,5)),
-            this.light_src.override({color: light_color}));
-        this.shapes.ball.draw(context, program_state,
-            Mat4.translation(light_position[0], light_position[1], light_position[2]).times(Mat4.translation(10,25,-30)).times(Mat4.scale(5,5,5)),
-            this.light_src.override({color: light_color}));
-        this.shapes.ball.draw(context, program_state,
-            Mat4.translation(light_position[0], light_position[1], light_position[2]).times(Mat4.translation(10,25,30)).times(Mat4.scale(5,5,5)),
-            this.light_src.override({color: light_color}));
+    render_scene(context, program_state, shadow_pass, draw_light_source=false, draw_shadow=false) {
+        let light_position = this.light_position;
+        let light_color = this.light_color;
+        const t = program_state.animation_time;
 
+        program_state.draw_shadow = draw_shadow;
+        
+        /*
+        if (draw_light_source && shadow_pass) {
+            this.shapes.ball.draw(context, program_state,
+                Mat4.translation(light_position[0], light_position[1], light_position[2]).times(Mat4.scale(.5,.5,.5)),
+                this.light_src.override({color: light_color}));
+        }
+        */
+        
         super.display(context, program_state);
-
-
-        // Draw the ground:
-
+        
+        
         // Draw the backgorund
         let tf = Mat4.translation(0,-10,0).times(Mat4.scale(100,100,100));
+        
         this.shapes.cube.draw(context, program_state, Mat4.scale(100,100,100).times(Mat4.translation(0,0.2,0)), this.materials.background);
         this.shapes.square.draw(context, program_state, Mat4.rotation(0.5*Math.PI,1,0,0).times(Mat4.scale(100,100,100)).times(Mat4.translation(0,0,0.21)), this.materials.floor_texture);
-
-        // Draw the table
+        
+        
+        // Draw the tabl0.5
         tf = Mat4.rotation(Math.PI / 2, 0, 1, 0).times(Mat4.translation(0,-6.65,0)).times(Mat4.scale(30,30,30));
-        //this.shapes.table.draw(context, program_state, tf, this.materials.table_texture);
-        this.shapes.pooltable.draw(context, program_state, tf);
-
+        if (shadow_pass) {
+            this.shapes.pooltable.draw(context, program_state, tf);
+        } else {
+            this.shapes.pooltable.draw(context, program_state, tf, this.materials.pure);
+        }
+        
+        
+        
         // display invisible wall for testing
         const display_wall = false
         if (display_wall) {
@@ -404,7 +470,8 @@ export class Pool_Scene extends Simulation {
                     this.materials.white_plastic)
             }
         }
-
+        
+        
         // Draw the cuestick
         if (this.pm.all_bodies_static())
         {
@@ -469,7 +536,7 @@ export class Pool_Scene extends Simulation {
             }
 
             tf = Mat4.translation(...this.cueball.center).times(this.cuestick_pos).times(Mat4.scale(8,8,15));
-            this.shapes.cuestick.draw(context, program_state, tf, this.materials.stars);
+            this.shapes.cuestick.draw(context, program_state, tf, shadow_pass ? this.materials.stars : this.materials.pure);
 
         }
         else
@@ -482,8 +549,103 @@ export class Pool_Scene extends Simulation {
                 canvas.removeEventListener("mouseup");
             }
         }
+        
+        if (this.logo == true) {
+            let model_trans_floor = Mat4.scale(4, 0.1, 4);
+            this.shapes.cube.draw(context, program_state, model_trans_floor, shadow_pass ? this.materials.bruin_texture : this.materials.pure);
+        }
+    }
+
+    display(context, program_state) {
+        const gl = context.context;
+        if (!this.init_ok) {
+            const ext = gl.getExtension('WEBGL_depth_texture');
+            if (!ext) {
+                return alert('need WEBGL_depth_texture');  // eslint-disable-line
+            }
+            this.texture_buffer_init(gl);
+
+            this.init_ok = true;
+        }
+
+        if (!context.scratchpad.controls) {
+            this.children.push(context.scratchpad.controls = new defs.Movement_Controls());
+            this.children.push(new defs.Program_State_Viewer());
+            program_state.set_camera(this.camera_pos);    // Locate the camera here (inverted matrix).
+        }
+        program_state.projection_transform = Mat4.perspective(Math.PI / 4, context.width / context.height, 1, 500);
 
 
+        let t = this.t = program_state.animation_time;
+        // The position of the light
+        let light_position = this.light_position = Mat4.rotation(t /1500, 0, 1, 0).times(vec4(3, 6, 0, 1));
+        // The color of the light
+        let light_color = this.light_color = color(
+            0.667 + Math.sin(t/500) / 3,
+            0.667 + Math.sin(t/1500) / 3,
+            0.667 + Math.sin(t/3500) / 3,
+            1
+        );
+
+        // The parameters of the Light are: position, color, size
+        /*
+        program_state.lights = [new Light(Mat4.translation(-10, 25, -30).times(light_position), this.light_color, 1000),
+            new Light(Mat4.translation(-10, 25, 30).times(light_position), this.light_color, 1000),
+            new Light(Mat4.translation(10, 25, -30).times(light_position), this.light_color, 1000),
+            new Light(Mat4.translation(10, 25, 30).times(light_position), this.light_color, 1000)];
+        */
+        this.light_view_target = vec4(0, 0, 0, 1);
+        this.light_field_of_view = 130 * Math.PI / 180; // 130 degree
+
+        program_state.lights = [new Light(this.light_position, this.light_color, 1000)];
+
+        const light_view_mat = Mat4.look_at(
+            vec3(this.light_position[0], this.light_position[1], this.light_position[2]),
+            vec3(this.light_view_target[0], this.light_view_target[1], this.light_view_target[2]),
+            vec3(0, 1, 0), // assume the light to target will have a up dir of +y, maybe need to change according to your case
+        );
+        const light_proj_mat = Mat4.perspective(this.light_field_of_view, 1, 0.5, 500);
+
+        // Bind the Depth Texture Buffer
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this.lightDepthFramebuffer);
+        gl.viewport(0, 0, this.lightDepthTextureSize, this.lightDepthTextureSize);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+        
+
+        // Prepare uniforms
+        program_state.light_view_mat = light_view_mat;
+        program_state.light_proj_mat = light_proj_mat;
+        program_state.light_tex_mat = light_proj_mat;
+        program_state.view_mat = light_view_mat;
+        program_state.projection_transform = light_proj_mat;
+        this.render_scene(context, program_state, false,false, false);
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+        program_state.view_mat = program_state.camera_inverse;
+        program_state.projection_transform = Mat4.perspective(Math.PI / 4, context.width / context.height, 0.5, 500);
+        this.render_scene(context, program_state, true,true, true);
+
+        // draw the point lights
+        /*
+        this.shapes.ball.draw(context, program_state,
+            Mat4.translation(light_position[0], light_position[1], light_position[2]).times(Mat4.translation(-10,25,-30)).times(Mat4.scale(5,5,5)),
+            this.light_src.override({color: light_color}));
+        this.shapes.ball.draw(context, program_state,
+            Mat4.translation(light_position[0], light_position[1], light_position[2]).times(Mat4.translation(-10,25,30)).times(Mat4.scale(5,5,5)),
+            this.light_src.override({color: light_color}));
+        this.shapes.ball.draw(context, program_state,
+            Mat4.translation(light_position[0], light_position[1], light_position[2]).times(Mat4.translation(10,25,-30)).times(Mat4.scale(5,5,5)),
+            this.light_src.override({color: light_color}));
+        this.shapes.ball.draw(context, program_state,
+            Mat4.translation(light_position[0], light_position[1], light_position[2]).times(Mat4.translation(10,25,30)).times(Mat4.scale(5,5,5)),
+            this.light_src.override({color: light_color}));
+        */
+        
+
+
+        
     }
 
 }
