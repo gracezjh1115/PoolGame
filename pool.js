@@ -16,7 +16,13 @@ export class Simulation extends Scene {
     // the simulation from the frame rate (see below).
     constructor() {
         super();
+        // Const Values
+        this.MAX_FLOOR_NUM = 3;
+        this.MAX_WALL_NUM = 2;
+        
         this.logo = false;
+        this.floor_num = 0;
+        this.wall_num = 0;
         this.pm = new Physics();
         Object.assign(this, {time_accumulator: 0, time_scale: 1, t: 0, dt: 1 / 20, bodies: [], steps_taken: 0});
     }
@@ -51,6 +57,10 @@ export class Simulation extends Scene {
     make_control_panel() {
         // make_control_panel(): Create the buttons for interacting with simulation time.
         this.key_triggered_button("Show team logo decoration", ["l"], () => this.logo = !(this.logo));
+        this.new_line();
+        
+        this.key_triggered_button("Change Ground", ["g"], () => this.floor_num = (this.floor_num + 1) % this.MAX_FLOOR_NUM);
+        this.key_triggered_button("Change Wall", ["w"], () => this.wall_num = (this.wall_num + 1) % this.MAX_WALL_NUM);
         this.new_line();
         
         this.key_triggered_button("Speed up time", ["Shift", "T"], () => this.time_scale *= 5);
@@ -103,6 +113,7 @@ export class Test_Data {
         const shader = new defs.Fake_Bump_Map(1);
 
         this.materials = {
+            // shadow test textures
             stars: new Material(new Shadow_Textured_Phong_Shader(1), {
                 color: hex_color("#ffffff"),
                 ambient: .4, diffusivity: .5, specularity: .5, 
@@ -114,21 +125,35 @@ export class Test_Data {
                 color_texture: null,
                 light_depth_texture: null
             }),
+            // pure texture
             pure: new Material(new Color_Phong_Shader(), {}),
             map_sat : new Material(new defs.Textured_Phong(1), {
                 color: hex_color("#000000"),
                 ambient: .8, diffusivity: .5, specularity: .5, texture: new Texture("assets/map-saturation.png")
             }),
+            // wall
             background: new Material(new defs.Textured_Phong(), {
                 color: hex_color("#000000"),
                 ambient: 1., texture: this.textures.club
             }),
+            background_textures: [
+                new Material(new defs.Textured_Phong(), {
+                    color: hex_color("#000000"),
+                    ambient: 1., texture: this.textures.club
+                }),
+                new Material(new defs.Textured_Phong(), {
+                    color: hex_color("#000000"),
+                    ambient: 1., texture: new Texture("assets/starryNight.png")
+                }),
+            ],
+            // ball texture
             white_plastic: new Material(new defs.Phong_Shader(),
                 {ambient: .4, diffusivity: .6, color: hex_color("#ffffff")}),
             red_plastic: new Material(new defs.Phong_Shader(),
                 {ambient: .4, diffusivity: .6, color: hex_color("#ff0000")}),
             green_plastic: new Material(new defs.Phong_Shader(),
                 {ambient: .7, diffusivity: .3, specularity: 0, color: hex_color("#005500")}),
+            // table textures
             table_leg_texture: new Material(new defs.Textured_Phong(), {
                 color: hex_color("#000000"),
                 ambient: 1., diffusivity: .8, specularity: 1, texture: new Texture("assets/background/table_decomposed/metalic.jpg")
@@ -150,10 +175,29 @@ export class Test_Data {
                 color: hex_color("#002200"),
                 ambient: 1., diffusivity: .8, specularity: .9, color_texture: new Texture("assets/background/table_decomposed/Plane.png"), light_depth_texture: null
             }),
+            // background floor texture
             floor_texture: new Material(new Shadow_Textured_Phong_Shader(1), {
                 color: hex_color("#000000"),
                 ambient: .7, diffusivity: .8, specularity: .9, color_texture: new Texture("assets/background/floor.png"), light_depth_texture: null
             }),
+            carpet_texture: new Material(new Shadow_Textured_Phong_Shader(1), {
+                color: hex_color("#000000"),
+                ambient: .7, diffusivity: .8, specularity: .9, color_texture: new Texture("assets/background/red_carpet.png"), light_depth_texture: null
+            }),
+            floor_textures: [
+                new Material(new Shadow_Textured_Phong_Shader(1), {
+                    color: hex_color("#000000"),
+                    ambient: .7, diffusivity: .8, specularity: .9, color_texture: new Texture("assets/background/floor.png"), light_depth_texture: null
+                 }),
+                new Material(new Shadow_Textured_Phong_Shader(1), {
+                    color: hex_color("#000000"),
+                    ambient: .7, diffusivity: .8, specularity: .9, color_texture: new Texture("assets/background/red_carpet.png"), light_depth_texture: null
+                 }),
+                new Material(new Shadow_Textured_Phong_Shader(1), {
+                    color: hex_color("#000000"),
+                    ambient: .7, diffusivity: .8, specularity: .9, color_texture: new Texture("assets/background/blue_carpet.png"), light_depth_texture: null
+                }),],
+            // logo texture
             bruin_texture: new Material(new Shadow_Textured_Phong_Shader(1), {
                 color: hex_color("#000000"),
                 ambient: .7, diffusivity: .8, specularity: .9, color_texture: new Texture("assets/bruin.png"), light_depth_texture: null
@@ -442,8 +486,8 @@ export class Pool_Scene extends Simulation {
         // Draw the backgorund
         let tf = Mat4.translation(0,-10,0).times(Mat4.scale(100,100,100));
         
-        this.shapes.cube.draw(context, program_state, Mat4.scale(100,100,100).times(Mat4.translation(0,0.2,0)), this.materials.background);
-        this.shapes.square.draw(context, program_state, Mat4.rotation(0.5*Math.PI,1,0,0).times(Mat4.scale(100,100,100)).times(Mat4.translation(0,0,0.21)), this.materials.floor_texture);
+        this.shapes.cube.draw(context, program_state, Mat4.scale(100,100,100).times(Mat4.translation(0,0.2,0)), this.materials.background_textures[this.wall_num]);
+        this.shapes.square.draw(context, program_state, Mat4.rotation(0.5*Math.PI,1,0,0).times(Mat4.scale(100,100,100)).times(Mat4.translation(0,0,0.21)), this.materials.floor_textures[this.floor_num]);
         
         
         // Draw the tabl0.5
