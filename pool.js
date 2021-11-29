@@ -114,7 +114,7 @@ export class Test_Data {
                 }),
                 new Material(new defs.Textured_Phong(), {
                     color: hex_color("#000000"),
-                    ambient: 1., texture: new Texture("assets/earth.gif")
+                    ambient: 1., texture: new Texture("assets/space.png")
                 }),
             ],
             // ball
