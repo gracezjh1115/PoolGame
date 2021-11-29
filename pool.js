@@ -1,10 +1,12 @@
 import {defs, tiny} from './src/common.js';
 import {Body} from "./src/body.js";
 import {Physics} from "./src/physics.js"
-import {Shape_From_File} from './examples/obj-file-demo.js'
+import {ShapesFromObject, Shape_From_File} from "./src/ShapesFromObject.js";
 
 // Pull these names into this module's scope for convenience:
 const {vec, vec3, unsafe3, vec4, color, hex_color, Mat4, Light, Shape, Material, Shader, Texture, Scene} = tiny;
+
+const {Textured_Phong, Phong_Shader} = defs
 
 export class Simulation extends Scene {
     // **Simulation** manages the stepping of simulation time.  Subclass it when making
@@ -86,19 +88,81 @@ export class Test_Data {
             grid: new Texture("assets/grid.png"),
             stars: new Texture("assets/stars.png"),
             text: new Texture("assets/text.png"),
+            club: new Texture("assets/club.jpg"),
         }
+
+        const shader = new defs.Fake_Bump_Map(1);
+
+        this.materials = {
+            stars: new Material(shader, {
+                color: hex_color("#eeeee4"),
+                ambient: .4, texture: this.textures.stars
+            }),
+            map_sat : new Material(new defs.Textured_Phong(1), {
+                color: hex_color("#000000"),
+                ambient: .8, diffusivity: .5, specularity: .5, texture: new Texture("assets/map-saturation.png")
+            }),
+            background: new Material(new defs.Textured_Phong(), {
+                color: hex_color("#000000"),
+                ambient: 1., texture: this.textures.club
+            }),
+            white_plastic: new Material(new defs.Phong_Shader(),
+                {ambient: .4, diffusivity: .6, color: hex_color("#ffffff")}),
+            red_plastic: new Material(new defs.Phong_Shader(),
+                {ambient: .4, diffusivity: .6, color: hex_color("#ff0000")}),
+            green_plastic: new Material(new defs.Phong_Shader(),
+                {ambient: .7, diffusivity: .3, specularity: 0, color: hex_color("#005500")}),
+            table_leg_texture: new Material(new defs.Textured_Phong(), {
+                color: hex_color("#000000"),
+                ambient: 1., diffusivity: .8, specularity: 1, texture: new Texture("assets/background/table_decomposed/metalic.jpg")
+            }),
+            outer_edge_texture: new Material(new defs.Textured_Phong(), {
+                color: hex_color("#000000"),
+                ambient: 1., diffusivity: .8, specularity: .9, texture: new Texture("assets/background/table_decomposed/OuterEdge.png")
+            }),
+            pocket_texture: new Material(new defs.Textured_Phong(), {
+                color: hex_color("#000000"),
+                ambient: 1., diffusivity: .1, specularity: .5, texture: new Texture("assets/background/table_decomposed/PocketTexture.png")
+            }),
+            inner_edge_texture: new Material(new defs.Textured_Phong(), {
+                color: hex_color("#000000"),
+                ambient: 1., diffusivity: .9, specularity: .9, texture: new Texture("assets/background/table_decomposed/InnerEdge.png")
+            }),
+            plane_texture: new Material(new defs.Textured_Phong(), {
+                color: hex_color("#000000"),
+                ambient: 1., diffusivity: .8, specularity: .9, texture: new Texture("assets/background/table_decomposed/Plane.png")
+            }),
+            floor_texture: new Material(new defs.Textured_Phong(), {
+                color: hex_color("#000000"),
+                ambient: .7, diffusivity: .8, specularity: .9, texture: new Texture("assets/background/floor.png")
+            }),
+        };
+
         this.shapes = {
             donut: new defs.Torus(15, 15, [[0, 2], [0, 1]]),
             cone: new defs.Closed_Cone(4, 10, [[0, 2], [0, 1]]),
             capped: new defs.Capped_Cylinder(4, 12, [[0, 2], [0, 1]]),
             ball: new defs.Subdivision_Sphere(4, [[0, 1], [0, 1]]),
             cube: new defs.Cube(),
+            square: new defs.Square(),
             prism: new (defs.Capped_Cylinder.prototype.make_flat_shaded_version())(10, 10, [[0, 2], [0, 1]]),
             gem: new (defs.Subdivision_Sphere.prototype.make_flat_shaded_version())(2),
             donut2: new (defs.Torus.prototype.make_flat_shaded_version())(20, 20, [[0, 2], [0, 1]]),
+            cuestick: new Shape_From_File("assets/background/cue_stick.obj"),
             //background
-            "pooltable": new Shape_From_File("assets/background/pool_table.obj"),
-            "cuestick": new Shape_From_File("assets/background/cue_stick.obj"),
+            //table 2: https://www.cgtrader.com/items/2816943
+            pooltable: new ShapesFromObject(["assets/background/table_decomposed/TableLeg.obj",
+                    "assets/background/table_decomposed/OuterEdge.obj",
+                    "assets/background/table_decomposed/Pocket.obj",
+                    "assets/background/table_decomposed/Diamond.obj",
+                    "assets/background/table_decomposed/InnerEdge.obj",
+                    "assets/background/table_decomposed/Plane.obj"],
+                [this.materials.table_leg_texture,
+                    this.materials.outer_edge_texture,
+                    this.materials.pocket_texture,
+                    this.materials.table_leg_texture,
+                    this.materials.inner_edge_texture,
+                    this.materials.plane_texture]),
         };
     }
 
@@ -116,52 +180,48 @@ export class Pool_Scene extends Simulation {
         super();
         this.data = new Test_Data();
         this.shapes = Object.assign({}, this.data.shapes);
+        this.materials = Object.assign({}, this.data.materials);
         this.shapes.square = new defs.Square();
         this.collider = {intersect_test: Body.intersect_sphere, points: new defs.Subdivision_Sphere(2), leeway: .3};
         this.camera_pos = Mat4.look_at(vec3(0,70,0), vec3(0,0,0), vec3(1,0,0));
-        
-        // 0 = selecting direction, 1 = selecting power, 2 = firing, 3 = balls moving 
+
+        // 0 = selecting direction, 1 = selecting power, 2 = firing, 3 = balls moving, 4 = cueball missing, 5 = down for cueball 
+        // 
         this.game_state = 0;
         this.down_start = 0;
         this.power = 0;
         this.cueball_init_speed = 0;
         this.cueball_direction = vec3(0,0,0);
-      
 
-        const shader = new defs.Fake_Bump_Map(1);
+        this.last_move = 0;
+        this.last_down = 0;
+        this.last_up = 0;
 
-        this.materials = {
-            stars: new Material(shader, {
-                color: hex_color("#eeeee4"),
-                ambient: .4, texture: this.data.textures.stars
-            }),
-            background: new Material(shader, {
-                color: hex_color("#ffffff"),
-                ambient: .4, texture: this.data.textures.earth
-            }),
-            white_plastic: new Material(new defs.Phong_Shader(),
-                {ambient: .4, diffusivity: .6, color: hex_color("#ffffff")}),
-            red_plastic: new Material(new defs.Phong_Shader(),
-                {ambient: .4, diffusivity: .6, color: hex_color("#ff0000")}),
-            green_plastic: new Material(new defs.Phong_Shader(),
-                {ambient: .3, diffusivity: .6, color: hex_color("#00ff00")}),
-        };
-
-
+        // players
+        this.player0_score = 0;
+        this.player1_score = 0;
+        this.turn0 = true;
+        this.turn_str = "player 0";
+        this.ball_down = false;
 
         // balls
-        let z = 10;
-        for (let i = 0; i < 9; i++)
-        {   
-            this.pm.bodies.push(new Body(this.shapes.ball, this.materials.red_plastic, vec3(1,1,1), 0, 0.2)
-                                    .emplace(Mat4.translation(5, -5, z), vec3(4, 0, 4), 0));
-            z -= 2.5
+        let initial_ball_position = []
+        for (let i = 0; i < 5; i ++) {
+            for (let j = 0; j < i + 1; j ++) {
+                initial_ball_position.push([1.02 * i - 2.04 * j, -5, 17 + 1.02 * Math.sqrt(3) * i])
+            }
+        }
+        for (let p of initial_ball_position)
+        {
+            this.pm.bodies.push(new Body(this.shapes.ball, this.materials.red_plastic, vec3(1,1,1), 0, 0.2, 'red')
+                .emplace(Mat4.translation(...p), vec3(0, 0, 0), 0));
         }
 
         // cueball
-        this.cueball = new Body(this.shapes.ball, this.materials.white_plastic, vec3(1,1,1), 0, 0.2)
-            .emplace(Mat4.translation(10, -5, 3), vec3(0, 0, 0), 0)
+        this.cueball = new Body(this.shapes.ball, this.materials.white_plastic, vec3(1,1,1), 0, 0.2, 'cueball')
+            .emplace(Mat4.translation(0, -5, -17), vec3(0, 0, 0), 0)
         this.pm.bodies.push(this.cueball)
+        this.cueball_in_bodies = true;
 //         this.cueball_pos = Mat4.translation(10,-5, 3);
 
         // cuestick
@@ -169,8 +229,26 @@ export class Pool_Scene extends Simulation {
 
         // invisible walls to detect collision with the walls
 
-        this.walls_polygon = this.pm.walls.map((w) => new defs.Polygon(w))
-        this.pockets_cylinder = new defs.Capped_Cylinder(5, 20)
+        this.walls_polygon = this.pm.walls.map((w) => new defs.Polygon(w));
+        this.pockets_cylinder = new defs.Capped_Cylinder(5, 20);
+
+        // light source
+        this.light_src = new Material(new Phong_Shader(), {
+            color: color(1, 1, 1, 1), ambient: 1, diffusivity: 0, specularity: 0
+        });
+    }
+
+    make_control_panel()
+    {
+        super.make_control_panel();
+        this.new_line();
+        this.live_string(box => {
+            box.textContent = this.turn_str + "'s turn to play"
+        })
+        this.new_line();
+        this.live_string(box => {
+            box.textContent = "Player 0: " + this.player0_score + " vs. Player 1: " + this.player1_score
+        });
     }
 
     random_color() {
@@ -220,7 +298,7 @@ export class Pool_Scene extends Simulation {
         this.pm.bodies = this.pm.bodies.filter((b) => {
             let re = this.pm.check_all_pockets(b)
             if (re.removable) {
-                if (b.removal_callback) b.removal_callback()
+                this.removal_callback(b)
                 return false;
             }
             if (!re.captured) {
@@ -229,6 +307,28 @@ export class Pool_Scene extends Simulation {
             }
             return true;
         })
+    }
+
+    removal_callback(b)
+    {   
+        this.ball_down = true;
+        let ball_type = b.type;
+        if (ball_type == "cueball")
+        {
+            this.game_state = 4;
+            this.cueball_in_bodies = false;
+        }
+        else
+        {
+            if (this.turn0)
+            {
+                this.player0_score += 1;
+            }
+            else
+            {
+                this.player1_score += 1;
+            }
+        }
     }
 
     mouse_hover_cuestick(e, pos, context, program_state)
@@ -244,44 +344,89 @@ export class Pool_Scene extends Simulation {
         pos_world_near.scale_by(1 / pos_world_near[3]);
         pos_world_far.scale_by(1 / pos_world_far[3]);
         center_world_near.scale_by(1 / center_world_near[3]);
-        
+
         let cuestick = pos_world_far.minus(pos_world_near);
         cuestick = pos_world_near.minus(cuestick.times(1 / cuestick[1] * (pos_world_near[1] + 5)));
         cuestick = cuestick.to3();
         let diff = cuestick.minus(this.cueball.center);
         let angle = diff.normalized().dot(vec3(0,0,1));
         this.cueball_direction = diff;
-        
+
         angle = Math.acos(angle);
         let direction = 1;
         if (diff[0] < 0)
         {
             direction = -1
         }
-        // pointing cuestick towards the direction of the mouse 
+        // pointing cuestick towards the direction of the mouse
         this.cuestick_pos = Mat4.rotation(direction*angle,0,1,0)
-                                            .times(Mat4.rotation(0.2, 1,0,0))
-                                            .times(Mat4.translation(0,0,-12));
-                            
+            .times(Mat4.rotation(0.2, 1,0,0))
+            .times(Mat4.translation(0,0,-12));
+
     }
 
-    mouse_down(e, pos, context, program_state)
+    mouse_hover_cueball(e, pos, context, program_state)
+    {
+        let pos_ndc_near = vec4(pos[0], pos[1], -1.0, 1.0);
+        let pos_ndc_far  = vec4(pos[0], pos[1],  1.0, 1.0);
+        let center_ndc_near = vec4(0.0, 0.0, -1.0, 1.0);
+        let P = program_state.projection_transform;
+        let V = program_state.camera_inverse;
+        let pos_world_near = Mat4.inverse(P.times(V)).times(pos_ndc_near);
+        let pos_world_far  = Mat4.inverse(P.times(V)).times(pos_ndc_far);
+        let center_world_near  = Mat4.inverse(P.times(V)).times(center_ndc_near);
+        pos_world_near.scale_by(1 / pos_world_near[3]);
+        pos_world_far.scale_by(1 / pos_world_far[3]);
+        center_world_near.scale_by(1 / center_world_near[3]);
+
+        let cueball = pos_world_far.minus(pos_world_near);
+        cueball = pos_world_near.minus(cueball.times(1 / cueball[1] * (pos_world_near[1] + 5)));
+        cueball = cueball.to3();
+        
+        cueball[0] = Math.max(cueball[0], -15.5);
+        cueball[0] = Math.min(cueball[0], 15.5);
+        cueball[2] = Math.max(cueball[2], -32.0);
+        cueball[2] = Math.min(cueball[2], 32.0);
+        
+        // pointing cuestick towards the direction of the mouse
+        if (this.cueball_in_bodies)
+        {
+            this.cueball.emplace(Mat4.translation(...cueball), vec3(0,0,0), 0);
+        }
+        else 
+        {
+            this.cueball.emplace(Mat4.translation(...cueball), vec3(0,0,0), 0);
+            this.pm.bodies.push(this.cueball);
+        }
+    }
+
+    mouse_down_cuestick(e, pos, context, program_state)
     {
         this.game_state = 1;
         this.down_start = this.steps_taken;
     }
 
-    mouse_up(e, pos, context, program_state)
+    mouse_down_cueball(e, pos, context, program_state)
+    {
+        this.game_state = 5;
+    }
+
+    mouse_up_cuestick(e, pos, context, program_state)
     {
         this.game_state = 2;
         this.cueball_init_speed = (this.steps_taken - this.down_start) * 0.1;
+    }
+
+    mouse_up_cueball(e, pos, context, program_state)
+    {
+        this.game_state = 3;
     }
 
     display(context, program_state) {
         // display(): Draw everything else in the scene besides the moving bodies.
 
         //first, draw everything inherit from parent class, all the moving objects in this case
-        
+
 
         if (!context.scratchpad.controls) {
             this.children.push(context.scratchpad.controls = new defs.Movement_Controls());
@@ -289,21 +434,52 @@ export class Pool_Scene extends Simulation {
             program_state.set_camera(this.camera_pos);    // Locate the camera here (inverted matrix).
         }
         program_state.projection_transform = Mat4.perspective(Math.PI / 4, context.width / context.height, 1, 500);
-        program_state.lights = [new Light(vec4(0, -20, -10, 1), color(1, 1, 1, 1), 100000),
-                                new Light(vec4(0, -20, -10, -50), color(1, 1, 1, 1), 100000),
-                                new Light(vec4(10, -20, -10, 0), color(1, 1, 1, 1), 100000),
-                                new Light(vec4(10, -20, -10, 50), color(1, 1, 1, 1), 100000)];
+
+
+        let t = this.t = program_state.animation_time;
+        // The position of the light
+        let light_position = this.light_position = Mat4.rotation(t /1500, 0, 1, 0).times(vec4(3, 6, 0, 1));
+        // The color of the light
+        let light_color = this.light_color = color(
+            0.667 + Math.sin(t/500) / 3,
+            0.667 + Math.sin(t/1500) / 3,
+            0.667 + Math.sin(t/3500) / 3,
+            1
+        );
+
+        // The parameters of the Light are: position, color, size
+        program_state.lights = [new Light(Mat4.translation(-10, 25, -30).times(light_position), this.light_color, 1000),
+            new Light(Mat4.translation(-10, 25, 30).times(light_position), this.light_color, 1000),
+            new Light(Mat4.translation(10, 25, -30).times(light_position), this.light_color, 1000),
+            new Light(Mat4.translation(10, 25, 30).times(light_position), this.light_color, 1000)];
+        // draw the point lights
+        this.shapes.ball.draw(context, program_state,
+            Mat4.translation(light_position[0], light_position[1], light_position[2]).times(Mat4.translation(-10,25,-30)).times(Mat4.scale(5,5,5)),
+            this.light_src.override({color: light_color}));
+        this.shapes.ball.draw(context, program_state,
+            Mat4.translation(light_position[0], light_position[1], light_position[2]).times(Mat4.translation(-10,25,30)).times(Mat4.scale(5,5,5)),
+            this.light_src.override({color: light_color}));
+        this.shapes.ball.draw(context, program_state,
+            Mat4.translation(light_position[0], light_position[1], light_position[2]).times(Mat4.translation(10,25,-30)).times(Mat4.scale(5,5,5)),
+            this.light_src.override({color: light_color}));
+        this.shapes.ball.draw(context, program_state,
+            Mat4.translation(light_position[0], light_position[1], light_position[2]).times(Mat4.translation(10,25,30)).times(Mat4.scale(5,5,5)),
+            this.light_src.override({color: light_color}));
+
         super.display(context, program_state);
+
+
         // Draw the ground:
 
-        //Draw the table:
         // Draw the backgorund
         let tf = Mat4.translation(0,-10,0).times(Mat4.scale(100,100,100));
-        this.shapes.cube.draw(context, program_state, tf, this.materials.background);
+        this.shapes.cube.draw(context, program_state, Mat4.scale(100,100,100).times(Mat4.translation(0,0.2,0)), this.materials.background);
+        this.shapes.square.draw(context, program_state, Mat4.rotation(0.5*Math.PI,1,0,0).times(Mat4.scale(100,100,100)).times(Mat4.translation(0,0,0.21)), this.materials.floor_texture);
 
         // Draw the table
-        tf = Mat4.translation(0,-10,0).times(Mat4.scale(25,25,25));
-        this.shapes.pooltable.draw(context, program_state, tf, this.materials.green_plastic);
+        tf = Mat4.rotation(Math.PI / 2, 0, 1, 0).times(Mat4.translation(0,-6.65,0)).times(Mat4.scale(30,30,30));
+        //this.shapes.table.draw(context, program_state, tf, this.materials.table_texture);
+        this.shapes.pooltable.draw(context, program_state, tf);
 
         // display invisible wall for testing
         const display_wall = false
@@ -319,45 +495,82 @@ export class Pool_Scene extends Simulation {
                     this.materials.white_plastic)
             }
         }
-
+        
         // Draw the cuestick
         if (this.pm.all_bodies_static())
         {
-            //console.log(this.game_state)
+            console.log(this.turn0);
+            if (this.game_state == 3 && !this.ball_down)
+            {
+                this.turn0 = !this.turn0;
+                if (this.turn0)
+                {
+                    this.turn_str = "player 0";
+                }
+                else
+                {
+                    this.turn_str = "player 1";
+                }
+            }
+            this.ball_down = false;
             // handling mouse interaction
             const mouse_position = (e, rect = canvas.getBoundingClientRect()) =>
-                    vec((e.clientX - (rect.left + rect.right) / 2) / ((rect.right - rect.left) / 2),
-                        (e.clientY - (rect.bottom + rect.top) / 2) / ((rect.top - rect.bottom) / 2));
+                vec((e.clientX - (rect.left + rect.right) / 2) / ((rect.right - rect.left) / 2),
+                    (e.clientY - (rect.bottom + rect.top) / 2) / ((rect.top - rect.bottom) / 2));
             let canvas = context.canvas;
-            var last_move = 0;
-            var last_down = 0;
-            var last_up = 0;
+            if (this.game_state == 3)
+            {
+                this.game_state = 0;
+            }
+
             canvas.addEventListener("mousemove", e => {
-                if (Date.now() -last_move < 2000 || (this.game_state != 0 && this.game_state != 3))
+                if (Date.now() -this.last_move < 40 || (this.game_state != 0 && this.game_state != 4))
                 {
                     return;
                 }
-                last_move = Date.now();
-                this.game_state = 0;
+                this.last_move = Date.now();
 
                 e.preventDefault();
-                this.mouse_hover_cuestick(e, mouse_position(e), context, program_state);
+                if (this.game_state == 0)
+                {
+                    this.mouse_hover_cuestick(e, mouse_position(e), context, program_state);                    
+                }
+                else if (this.game_state == 4)
+                {
+                    this.turn0 = ~this.turn0;
+                    this.mouse_hover_cueball(e, mouse_position(e), context, program_state);
+                }
             });
             canvas.addEventListener("mousedown", e => {
-                if (Date.now() -last_down > 200 || this.game_state == 0)
+                if (Date.now() - this.last_down > 200 && (this.game_state == 0 || this.game_state == 4))
                 {
-                    last_down = Date.now();
+                    this.last_down = Date.now();
                     //console.log("down")
-                    this.mouse_down(e, mouse_position(e), context, program_state);
+                    if (this.game_state == 0)
+                    {
+                        this.mouse_down_cuestick(e, mouse_position(e), context, program_state);
+                    }
+                    else if (this.game_state == 4)
+                    {
+                        this.mouse_down_cueball(e, mouse_position(e), context, program_state);
+                    }
                 }
 
             })
             canvas.addEventListener("mouseup", e => {
-                if (Date.now() -last_up > 200 && this.game_state == 1)
+                if (Date.now() - this.last_up > 20 && (this.game_state == 1 || this.game_state == 5))
                 {
-                    last_up = Date.now();
+                    this.last_up = Date.now();
                     //console.log("up")
-                    this.mouse_up(e, mouse_position(e), context, program_state);                    
+                    if (this.game_state == 1)
+                    {
+                        this.mouse_up_cuestick(e, mouse_position(e), context, program_state);
+                    }
+                    else if (this.game_state == 5)
+                    {
+                        this.mouse_up_cueball(e, mouse_position(e), context, program_state);
+                    }
+
                 }
 
             })
@@ -401,10 +614,4 @@ export class Pool_Scene extends Simulation {
 
     }
 
-//     show_explanation(document_element) {
-//         document_element.innerHTML += `<p>This demo lets random initial momentums carry bodies until they fall and bounce.  It shows a good way to do incremental movements, which are crucial for making objects look like they're moving on their own instead of following a pre-determined path.  Animated objects look more real when they have inertia and obey physical laws, instead of being driven by simple sinusoids or periodic functions.
-//                                      </p><p>For each moving object, we need to store a model matrix somewhere that is permanent (such as inside of our class) so we can keep consulting it every frame.  As an example, for a bowling simulation, the ball and each pin would go into an array (including 11 total matrices).  We give the model transform matrix a \"velocity\" and track it over time, which is split up into linear and angular components.  Here the angular velocity is expressed as an Euler angle-axis pair so that we can scale the angular speed how we want it.
-//                                      </p><p>The forward Euler method is used to advance the linear and angular velocities of each shape one time-step.  The velocities are not subject to any forces here, but just a downward acceleration.  Velocities are also constrained to not take any objects under the ground plane.
-//                                      </p><p>This scene extends class Simulation, which carefully manages stepping simulation time for any scenes that subclass it.  It totally decouples the whole simulation from the frame rate, following the suggestions in the blog post <a href=\"https://gafferongames.com/post/fix_your_timestep/\" target=\"blank\">\"Fix Your Timestep\"</a> by Glenn Fielder.  Buttons allow you to speed up and slow down time to show that the simulation's answers do not change.</p>`;
-//     }
 }

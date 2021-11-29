@@ -9,9 +9,9 @@ export class Body {
     // **Body** can store and update the properties of a 3D body that incrementally
     // moves from its previous place due to velocities.  It conforms to the
     // approach outlined in the "Fix Your Timestep!" blog post by Glenn Fiedler.
-    constructor(shape, material, size, weight=0, rolling_friction=0) {
+    constructor(shape, material, size, weight=0, rolling_friction=0, type='') {
         Object.assign(this,
-            {shape, material, size, weight, rolling_friction})
+            {shape, material, size, weight, rolling_friction, type})
         this.center = vec3(0, 0, 0);
         this.rotation = Mat4.identity();
         this.linear_velocity = vec3(0, 0, 0);
