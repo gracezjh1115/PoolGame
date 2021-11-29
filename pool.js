@@ -102,16 +102,29 @@ export class Test_Data {
                 color: hex_color("#000000"),
                 ambient: .8, diffusivity: .5, specularity: .5, texture: new Texture("assets/map-saturation.png")
             }),
-            background: new Material(new defs.Textured_Phong(), {
-                color: hex_color("#000000"),
-                ambient: 1., texture: this.textures.club
-            }),
+            // wall backgrounds
+            backgrounds: [
+                new Material(new defs.Textured_Phong(), {
+                    color: hex_color("#000000"),
+                    ambient: 1., texture: this.textures.club
+                }),
+                new Material(new defs.Textured_Phong(), {
+                    color: hex_color("#000000"),
+                    ambient: 1., texture: new Texture("assets/starryNight.png")
+                }),
+                new Material(new defs.Textured_Phong(), {
+                    color: hex_color("#000000"),
+                    ambient: 1., texture: new Texture("assets/earth.gif")
+                }),
+            ],
+            // ball
             white_plastic: new Material(new defs.Phong_Shader(),
                 {ambient: .4, diffusivity: .6, color: hex_color("#ffffff")}),
             red_plastic: new Material(new defs.Phong_Shader(),
                 {ambient: .4, diffusivity: .6, color: hex_color("#ff0000")}),
             green_plastic: new Material(new defs.Phong_Shader(),
                 {ambient: .7, diffusivity: .3, specularity: 0, color: hex_color("#005500")}),
+            // table
             table_leg_texture: new Material(new defs.Textured_Phong(), {
                 color: hex_color("#000000"),
                 ambient: 1., diffusivity: .8, specularity: 1, texture: new Texture("assets/background/table_decomposed/metalic.jpg")
@@ -132,10 +145,21 @@ export class Test_Data {
                 color: hex_color("#000000"),
                 ambient: 1., diffusivity: .8, specularity: .9, texture: new Texture("assets/background/table_decomposed/Plane.png")
             }),
-            floor_texture: new Material(new defs.Textured_Phong(), {
-                color: hex_color("#000000"),
-                ambient: .7, diffusivity: .8, specularity: .9, texture: new Texture("assets/background/floor.png")
-            }),
+            // floor
+            floor_textures: [
+                new Material(new defs.Textured_Phong(), {
+                    color: hex_color("#000000"),
+                    ambient: .7, diffusivity: .8, specularity: .9, texture: new Texture("assets/background/floor.png")
+                }),
+                new Material(new defs.Textured_Phong(), {
+                    color: hex_color("#000000"),
+                    ambient: .7, diffusivity: .8, specularity: .9, texture: new Texture("assets/background/red_carpet.png")
+                }),
+                new Material(new defs.Textured_Phong(), {
+                    color: hex_color("#000000"),
+                    ambient: .7, diffusivity: .8, specularity: .9, texture: new Texture("assets/background/blue_carpet.png")
+                }),
+            ],
         };
 
         this.shapes = {
@@ -184,6 +208,12 @@ export class Pool_Scene extends Simulation {
         this.shapes.square = new defs.Square();
         this.collider = {intersect_test: Body.intersect_sphere, points: new defs.Subdivision_Sphere(2), leeway: .3};
         this.camera_pos = Mat4.look_at(vec3(0,70,0), vec3(0,0,0), vec3(1,0,0));
+        
+        // background controllers
+        this.floor_num = 0;
+        this.wall_num = 0;
+        this.MAX_FLOOR_NUM = 3;
+        this.MAX_WALL_NUM = 3;
 
         // 0 = selecting direction, 1 = selecting power, 2 = firing, 3 = balls moving, 4 = cueball missing, 5 = down for cueball 
         // 
@@ -240,8 +270,7 @@ export class Pool_Scene extends Simulation {
 
     make_control_panel()
     {
-        super.make_control_panel();
-        this.new_line();
+        // scoring
         this.live_string(box => {
             box.textContent = this.turn_str + "'s turn to play"
         })
@@ -249,6 +278,14 @@ export class Pool_Scene extends Simulation {
         this.live_string(box => {
             box.textContent = "Player 0: " + this.player0_score + " vs. Player 1: " + this.player1_score
         });
+        this.new_line();
+        
+        // background
+        this.key_triggered_button("Change ground", ["g"], () => this.floor_num = (this.floor_num + 1) % this.MAX_FLOOR_NUM);
+        this.key_triggered_button("Change background wall", ["b"], () => this.wall_num = (this.wall_num + 1) % this.MAX_WALL_NUM);
+        this.new_line();
+        
+        super.make_control_panel();
     }
 
     random_color() {
@@ -473,8 +510,8 @@ export class Pool_Scene extends Simulation {
 
         // Draw the backgorund
         let tf = Mat4.translation(0,-10,0).times(Mat4.scale(100,100,100));
-        this.shapes.cube.draw(context, program_state, Mat4.scale(100,100,100).times(Mat4.translation(0,0.2,0)), this.materials.background);
-        this.shapes.square.draw(context, program_state, Mat4.rotation(0.5*Math.PI,1,0,0).times(Mat4.scale(100,100,100)).times(Mat4.translation(0,0,0.21)), this.materials.floor_texture);
+        this.shapes.cube.draw(context, program_state, Mat4.scale(100,100,100).times(Mat4.translation(0,0.2,0)), this.materials.backgrounds[this.wall_num]);
+        this.shapes.square.draw(context, program_state, Mat4.rotation(0.5*Math.PI,1,0,0).times(Mat4.scale(100,100,100)).times(Mat4.translation(0,0,0.21)), this.materials.floor_textures[this.floor_num]);
 
         // Draw the table
         tf = Mat4.rotation(Math.PI / 2, 0, 1, 0).times(Mat4.translation(0,-6.65,0)).times(Mat4.scale(30,30,30));
