@@ -243,12 +243,12 @@ export class Pool_Scene extends Simulation {
         }
         for (let p of initial_ball_position)
         {
-            this.pm.bodies.push(new Body(this.shapes.ball, this.materials.red_plastic, vec3(1,1,1), 0, 0.2, 'red')
+            this.pm.bodies.push(new Body(this.shapes.ball, this.materials.red_plastic, vec3(1,1,1), 0, 0.4, 'red')
                 .emplace(Mat4.translation(...p), vec3(0, 0, 0), 0));
         }
 
         // cueball
-        this.cueball = new Body(this.shapes.ball, this.materials.white_plastic, vec3(1,1,1), 0, 0.2, 'cueball')
+        this.cueball = new Body(this.shapes.ball, this.materials.white_plastic, vec3(1,1,1), 0, 0.4, 'cueball')
             .emplace(Mat4.translation(0, -5, -17), vec3(0, 0, 0), 0)
         this.pm.bodies.push(this.cueball)
         this.cueball_in_bodies = true;
@@ -352,6 +352,7 @@ export class Pool_Scene extends Simulation {
         let ball_type = b.type;
         if (ball_type == "cueball")
         {
+            this.ball_down = false;
             this.game_state = 4;
             this.cueball_in_bodies = false;
         }
@@ -536,7 +537,6 @@ export class Pool_Scene extends Simulation {
         // Draw the cuestick
         if (this.pm.all_bodies_static())
         {
-            console.log(this.turn0);
             if (this.game_state == 3 && !this.ball_down)
             {
                 this.turn0 = !this.turn0;
@@ -561,7 +561,7 @@ export class Pool_Scene extends Simulation {
             }
 
             canvas.addEventListener("mousemove", e => {
-                if (Date.now() -this.last_move < 40 || (this.game_state != 0 && this.game_state != 4))
+                if (Date.now() -this.last_move < 100 || (this.game_state != 0 && this.game_state != 4))
                 {
                     return;
                 }
@@ -574,12 +574,12 @@ export class Pool_Scene extends Simulation {
                 }
                 else if (this.game_state == 4)
                 {
-                    this.turn0 = ~this.turn0;
+                    this.turn0 = !this.turn0;
                     this.mouse_hover_cueball(e, mouse_position(e), context, program_state);
                 }
             });
             canvas.addEventListener("mousedown", e => {
-                if (Date.now() - this.last_down > 200 && (this.game_state == 0 || this.game_state == 4))
+                if (Date.now() - this.last_down > 500 && (this.game_state == 0 || this.game_state == 4))
                 {
                     this.last_down = Date.now();
                     //console.log("down")
