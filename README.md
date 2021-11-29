@@ -1,15 +1,7 @@
-# Shadow Demo
+# Pool Game
 
-This is a Tiny-Graphics demo about advanced shadow implementation that with 2 passes.
-
-![main](./docs/main.png)
+This is the team project for UCLA CS174A, 2021 Fall. We will be implementing a pool game in this project. For more details about functionality, goals,  features, and references please see the project proposal at https://docs.google.com/document/d/19UiwEJEHS5aASl2g9fzg5kQxJ9brOm_I-3Kk922n4PQ/edit
 
 ### Code Location
-
-Most of the code are located in `./examples/shadow-demo.js`. You can copy that file into the `examples` folder of your repos (like assignments or team project), it should be compatible and you can import it as your main scene.
-
-### References
-
-https://webglfundamentals.org/webgl/lessons/webgl-shadows.html
-
-https://learnopengl.com/Advanced-Lighting/Shadows/Shadow-Mapping
+* pool.js: This is where most of the code are located
+* src: directory that contains helper structures
