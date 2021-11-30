@@ -174,13 +174,17 @@ export class Test_Data {
             // logo
             bruin_texture: new Material(new Shadow_Textured_Phong_Shader(1), {
                 color: hex_color("#000000"),
-                ambient: .7, diffusivity: .8, specularity: .9, color_texture: new Texture("assets/bruin.png"),
+                ambient: 1., diffusivity: .8, specularity: .9, color_texture: new Texture("assets/bruin.png"),
                 light_depth_texture: null
             }),
             usc_texture: new Material(new Shadow_Textured_Phong_Shader(1), {
                 color: hex_color("#000000"),
-                ambient: .7, diffusivity: .8, specularity: .9, color_texture: new Texture("assets/usc.png"),
+                ambient: 1., diffusivity: .8, specularity: .9, color_texture: new Texture("assets/usc.png"),
                 light_depth_texture: null
+            }),
+            glow_texture: new Material(new defs.Textured_Phong(), {
+                color: hex_color("#000000"),
+                ambient: 1., diffusivity: .8, specularity: .9, texture: new Texture("assets/glow.png")
             }),
             // static text for score board
             static_text: new Material(new defs.Textured_Phong(1), {
@@ -603,8 +607,10 @@ export class Pool_Scene extends Simulation {
         // Draw the backgorund
         let tf = Mat4.translation(0,-10,0).times(Mat4.scale(100,100,100));
         this.shapes.cube.draw(context, program_state, Mat4.scale(100,100,100).times(Mat4.translation(0,0.2,0)), this.materials.backgrounds[this.wall_num]);
+        // Draw the floor
         this.shapes.square.draw(context, program_state, Mat4.rotation(0.5*Math.PI,1,0,0).times(Mat4.scale(100,100,100)).times(Mat4.translation(0,0,0.21)), this.materials.floor_textures[this.floor_num]);
 
+        
         // Draw the table
         tf = Mat4.rotation(Math.PI / 2, 0, 1, 0).times(Mat4.translation(0,-6.65,0)).times(Mat4.scale(30,30,30));
         //this.shapes.table.draw(context, program_state, tf, this.materials.table_texture);
@@ -750,8 +756,10 @@ export class Pool_Scene extends Simulation {
             this.shapes.cube.draw(context, program_state, model_trans_logo_2, shadow_pass ? this.materials.usc_texture : this.materials.pure);
         }
         
-        // show which player is playing
+        // glow effect to show which player is playing
         let player_logo = Mat4.scale(2, 0.1, 2).times(Mat4.translation(13, -6.65, -18));
+        let glow_transformation = Mat4.scale(4.5, 0.1, 4.5).times(Mat4.translation(5.8, -9, -8)).times(Mat4.rotation(0.5 * Math.PI, 1, 0, 0));
+        this.shapes.square.draw(context, program_state, this.turn0 ? glow_transformation : glow_transformation.times(Mat4.translation(0,10.65,0)), this.materials.glow_texture);
         this.shapes.cube.draw(context, program_state, player_logo, this.materials.bruin_texture);
         this.shapes.cube.draw(context, program_state, player_logo.times(Mat4.translation(0, 0, 24)), this.materials.usc_texture);
         
@@ -759,10 +767,10 @@ export class Pool_Scene extends Simulation {
         const score_string = "UCLA: " + this.player0_score + " v.s. USC: " + this.player1_score;
         let score_tranformation = Mat4.identity();
         score_tranformation = score_tranformation
-                                .times(Mat4.translation(18.4, 20, -22))
+                                .times(Mat4.translation(26, -0.5, -32))
                                 .times(Mat4.rotation(-Math.PI * 0.5, 1, 0, 0))
                                 .times(Mat4.rotation(-Math.PI * 0.5, 0, 0, 1))
-                                .times(Mat4.scale(1, 1, 1));
+                                .times(Mat4.scale(1.5, 1.5, 1.5));
         this.shapes.text.set_string(score_string, context.context);
         this.shapes.text.draw(context, program_state, score_tranformation, this.materials.static_text);
 
