@@ -193,9 +193,9 @@ export class Test_Data {
             prism: new (defs.Capped_Cylinder.prototype.make_flat_shaded_version())(10, 10, [[0, 2], [0, 1]]),
             gem: new (defs.Subdivision_Sphere.prototype.make_flat_shaded_version())(2),
             donut2: new (defs.Torus.prototype.make_flat_shaded_version())(20, 20, [[0, 2], [0, 1]]),
+            // cue stick
             cuestick: new Shape_From_File("assets/background/cue_stick.obj"),
-            //background
-            //table 2: https://www.cgtrader.com/items/2816943
+            // table
             pooltable: new ShapesFromObject(["assets/background/table_decomposed/TableLeg.obj",
                     "assets/background/table_decomposed/OuterEdge.obj",
                     "assets/background/table_decomposed/Pocket.obj",
@@ -208,6 +208,10 @@ export class Test_Data {
                     this.materials.table_leg_texture,
                     this.materials.inner_edge_texture,
                     this.materials.plane_texture]),
+            // static texts
+            congrats: new Shape_From_File("assets/background/plain_congrats.obj"),
+            member1: new Shape_From_File("assets/background/member_1.obj"),
+            member2: new Shape_From_File("assets/background/member_2.obj"),
         };
     }
 
@@ -259,6 +263,9 @@ export class Pool_Scene extends Simulation {
         this.shadow_pass = false;
         this.init_ok = false;
         this.show_player = false;
+
+        // ending texts
+        this.game_ended = false; // true if all 15 balls are in pockets
 
         // balls
         let initial_ball_position = []
@@ -312,6 +319,10 @@ export class Pool_Scene extends Simulation {
         // background
         this.key_triggered_button("Change ground", ["g"], () => this.floor_num = (this.floor_num + 1) % this.MAX_FLOOR_NUM);
         this.key_triggered_button("Change background wall", ["b"], () => this.wall_num = (this.wall_num + 1) % this.MAX_WALL_NUM);
+        this.new_line();
+
+        // for demo purpose ONLY
+        this.key_triggered_button("Show curtain call greetings", ["c"], () => this.game_ended ^= 1);
         this.new_line();
         
         super.make_control_panel();
@@ -394,6 +405,11 @@ export class Pool_Scene extends Simulation {
             else
             {
                 this.player1_score += 1;
+            }
+
+            if (this.player0_score + this.player1_score == 15)
+            {
+                this.game_ended = true;
             }
         }
     }
@@ -728,6 +744,20 @@ export class Pool_Scene extends Simulation {
         // show which player is playing
         let player_logo = Mat4.scale(2, 0.1, 2).times(Mat4.translation(13, -6.65, -18));
         this.shapes.cube.draw(context, program_state, player_logo, this.turn0 ? this.materials.bruin_texture : this.materials.usc_texture);
+    
+        // show ending texts upon either player hit all balls (simplified rule?)
+        // this.player0_score + this.player1_score == 15 
+        let text_tranformation = Mat4.identity();
+        text_tranformation = text_tranformation
+                                .times(Mat4.translation(0, 20, 0))
+                                .times(Mat4.rotation(-Math.PI * 0.5, 1, 0, 0))
+                                .times(Mat4.rotation(-Math.PI * 0.5, 0, 0, 1))
+                                .times(Mat4.scale(5.0 + 1.0 * Math.sin( t / 1000 ),5.0 + 1.0 * Math.sin( t / 1000 ), 5.0 + 1.0 * Math.sin( t / 1000 )));
+        if(this.game_ended){
+            this.shapes.congrats.draw(context, program_state, text_tranformation.times(Mat4.translation(-0.2, 1., 0.)).times(Mat4.scale(2,2,2)), this.materials.white_plastic);
+            this.shapes.member1.draw(context, program_state, text_tranformation.times(Mat4.translation(0.8, 0., 0.)), this.materials.white_plastic);
+            this.shapes.member2.draw(context, program_state, text_tranformation.times(Mat4.translation(1.2, -1., 0.)).times(Mat4.scale(1.2, 1.2, 1.2)), this.materials.white_plastic); 
+        }
     }
 
     display(context, program_state) {
