@@ -4,6 +4,7 @@ import {Physics} from "./src/physics.js";
 import {ShapesFromObject, Shape_From_File} from "./src/ShapesFromObject.js";
 import {Color_Phong_Shader, Shadow_Textured_Phong_Shader,
     Depth_Texture_Shader_2D, Buffered_Texture, LIGHT_DEPTH_TEX_SIZE} from './examples/shadow-demo-shaders.js';
+import {Text_Line} from './examples/text-demo.js';
 
 // Pull these names into this module's scope for convenience:
 const {vec, vec3, unsafe3, vec4, color, hex_color, Mat4, Light, Shape, Material, Shader, Texture, Scene} = tiny;
@@ -181,6 +182,10 @@ export class Test_Data {
                 ambient: .7, diffusivity: .8, specularity: .9, color_texture: new Texture("assets/usc.png"),
                 light_depth_texture: null
             }),
+            // static text for score board
+            static_text: new Material(new defs.Textured_Phong(1), {
+                ambient: 1, diffusivity: 0, specularity: 0, texture: new Texture("assets/text.png")
+            }),
         };
 
         this.shapes = {
@@ -208,11 +213,15 @@ export class Test_Data {
                     this.materials.table_leg_texture,
                     this.materials.inner_edge_texture,
                     this.materials.plane_texture]),
-            // static texts
+            // static 3D texts
             congrats: new Shape_From_File("assets/background/plain_congrats.obj"),
             member1: new Shape_From_File("assets/background/member_1.obj"),
             member2: new Shape_From_File("assets/background/member_2.obj"),
+            // dynamic 2D texts
+            text: new Text_Line(35), // up to 5 lines
         };
+        // Don't create any DOM elements to control this scene:
+        this.widget_options = {make_controls: false};
     }
 
     random_shape(shape_list = this.shapes) {
@@ -308,7 +317,7 @@ export class Pool_Scene extends Simulation {
         })
         this.new_line();
         this.live_string(box => {
-            box.textContent = "UCLA: " + this.player0_score + " vs. USC: " + this.player1_score
+            box.textContent = "UCLA: " + this.player0_score.toString() + " vs. USC: " + this.player1_score
         });
         this.new_line();
         
@@ -743,8 +752,20 @@ export class Pool_Scene extends Simulation {
         
         // show which player is playing
         let player_logo = Mat4.scale(2, 0.1, 2).times(Mat4.translation(13, -6.65, -18));
-        this.shapes.cube.draw(context, program_state, player_logo, this.turn0 ? this.materials.bruin_texture : this.materials.usc_texture);
-    
+        this.shapes.cube.draw(context, program_state, player_logo, this.materials.bruin_texture);
+        this.shapes.cube.draw(context, program_state, player_logo.times(Mat4.translation(0, 0, 24)), this.materials.usc_texture);
+        
+        // score board
+        const score_string = "UCLA: " + this.player0_score + " v.s. USC: " + this.player1_score;
+        let score_tranformation = Mat4.identity();
+        score_tranformation = score_tranformation
+                                .times(Mat4.translation(18.4, 20, -22))
+                                .times(Mat4.rotation(-Math.PI * 0.5, 1, 0, 0))
+                                .times(Mat4.rotation(-Math.PI * 0.5, 0, 0, 1))
+                                .times(Mat4.scale(1, 1, 1));
+        this.shapes.text.set_string(score_string, context.context);
+        this.shapes.text.draw(context, program_state, score_tranformation, this.materials.static_text);
+
         // show ending texts upon either player hit all balls (simplified rule?)
         // this.player0_score + this.player1_score == 15 
         let text_tranformation = Mat4.identity();
