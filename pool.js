@@ -608,9 +608,11 @@ export class Pool_Scene extends Simulation {
         let tf = Mat4.translation(0,-10,0).times(Mat4.scale(100,100,100));
         this.shapes.cube.draw(context, program_state, Mat4.scale(100,100,100).times(Mat4.translation(0,0.2,0)), this.materials.backgrounds[this.wall_num]);
         // Draw the floor
-        this.shapes.square.draw(context, program_state, Mat4.rotation(0.5*Math.PI,1,0,0).times(Mat4.scale(100,100,100)).times(Mat4.translation(0,0,0.21)), this.materials.floor_textures[this.floor_num]);
-
+        this.shapes.square.draw(context, program_state, Mat4.rotation(0.5*Math.PI,1,0,0).times(Mat4.scale(100,100,100)).times(Mat4.translation(0,0,0.25)), this.materials.floor_textures[this.floor_num]);
+        // Draw the ceiling
+        this.shapes.square.draw(context, program_state, Mat4.rotation(0.5*Math.PI,1,0,0).times(Mat4.scale(100,100,100)).times(Mat4.translation(0,0,-0.9)), this.materials.floor_textures[this.floor_num]);
         
+
         // Draw the table
         tf = Mat4.rotation(Math.PI / 2, 0, 1, 0).times(Mat4.translation(0,-6.65,0)).times(Mat4.scale(30,30,30));
         //this.shapes.table.draw(context, program_state, tf, this.materials.table_texture);
