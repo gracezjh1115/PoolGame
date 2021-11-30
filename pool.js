@@ -289,12 +289,12 @@ export class Pool_Scene extends Simulation {
         }
         for (let p of initial_ball_position)
         {
-            this.pm.bodies.push(new Body(this.shapes.ball, this.materials.red_plastic, vec3(1,1,1), 0, 0.4, 'red')
+            this.pm.bodies.push(new Body(this.shapes.ball, this.materials.red_plastic, vec3(1,1,1), 0, 0.2, 'red')
                 .emplace(Mat4.translation(...p), vec3(0, 0, 0), 0));
         }
 
         // cueball
-        this.cueball = new Body(this.shapes.ball, this.materials.white_plastic, vec3(1,1,1), 0, 0.4, 'cueball')
+        this.cueball = new Body(this.shapes.ball, this.materials.white_plastic, vec3(1,1,1), 0, 0.2, 'cueball')
             .emplace(Mat4.translation(0, -5, -17), vec3(0, 0, 0), 0)
         this.pm.bodies.push(this.cueball)
         this.cueball_in_bodies = true;
@@ -504,6 +504,11 @@ export class Pool_Scene extends Simulation {
 
     mouse_down_cueball(e, pos, context, program_state)
     {
+//         console.log("here");
+//         if (this.game_state = 4)
+//         {
+//             this.turn0 = !this.turn0;
+//         }
         this.game_state = 5;
     }
 
@@ -511,6 +516,7 @@ export class Pool_Scene extends Simulation {
     {
         this.game_state = 2;
         this.cueball_init_speed = (this.steps_taken - this.down_start) * 0.1;
+        this.cueball_init_speed = Math.min(10, this.cueball_init_speed);
     }
 
     mouse_up_cueball(e, pos, context, program_state)
@@ -640,8 +646,10 @@ export class Pool_Scene extends Simulation {
         // Draw the cuestick
         if (this.pm.all_bodies_static())
         {
+//             console.log(this.ball_down)
             if (this.game_state == 3 && !this.ball_down)
             {
+                console.log("herehere")
                 this.turn0 = !this.turn0;
                 if (this.turn0)
                 {
@@ -677,7 +685,6 @@ export class Pool_Scene extends Simulation {
                 }
                 else if (this.game_state == 4)
                 {
-                    this.turn0 = !this.turn0;
                     this.mouse_hover_cueball(e, mouse_position(e), context, program_state);
                 }
             });
