@@ -7,7 +7,8 @@ import {Color_Phong_Shader, Shadow_Textured_Phong_Shader,
 import {Text_Line} from './examples/text-demo.js';
 
 // Pull these names into this module's scope for convenience:
-const {vec, vec3, unsafe3, vec4, color, hex_color, Mat4, Light, Shape, Material, Shader, Texture, Scene} = tiny;
+const {Vector, 
+vec, vec3, unsafe3, vec4, color, hex_color, Mat4, Light, Shape, Material, Shader, Texture, Scene} = tiny;
 
 const {Textured_Phong, Phong_Shader} = defs
 
@@ -260,6 +261,7 @@ export class Pool_Scene extends Simulation {
         this.power = 0;
         this.cueball_init_speed = 0;
         this.cueball_direction = vec3(0,0,0);
+        this.allowed_placement = true;
 
         this.last_move = 0;
         this.last_down = 0;
@@ -337,6 +339,8 @@ export class Pool_Scene extends Simulation {
         // for demo purpose ONLY
         this.key_triggered_button("Show curtain call greetings", ["c"], () => this.game_ended ^= 1);
         this.new_line();
+
+        this.key_triggered_button("reset camera position", ['r'], () => this.camera_pos = Mat4.look_at(vec3(0,70,0), vec3(0,0,0), vec3(1,0,0)));
         
         super.make_control_panel();
     }
@@ -483,6 +487,30 @@ export class Pool_Scene extends Simulation {
         cueball[0] = Math.min(cueball[0], 15.5);
         cueball[2] = Math.max(cueball[2], -32.0);
         cueball[2] = Math.min(cueball[2], 32.0);
+
+        let flag = true;
+
+        for (let b of this.pm.bodies)
+        {
+            if (b.type == "cueball")
+            {
+                continue;
+            }
+            let ball_center = b.center;
+            let distance = cueball.minus(ball_center).norm();
+            if (distance <= 2)
+            {
+                flag = false;
+            }
+        }
+        if (!flag)
+        {
+            this.allowed_placement = false;
+        }
+        else
+        {
+            this.allowed_placement = true;
+        }
         
         // pointing cuestick towards the direction of the mouse
         if (this.cueball_in_bodies)
@@ -494,6 +522,8 @@ export class Pool_Scene extends Simulation {
             this.cueball.emplace(Mat4.translation(...cueball), vec3(0,0,0), 0);
             this.pm.bodies.push(this.cueball);
         }
+
+
     }
 
     mouse_down_cuestick(e, pos, context, program_state)
@@ -504,12 +534,10 @@ export class Pool_Scene extends Simulation {
 
     mouse_down_cueball(e, pos, context, program_state)
     {
-//         console.log("here");
-//         if (this.game_state = 4)
-//         {
-//             this.turn0 = !this.turn0;
-//         }
-        this.game_state = 5;
+        if (this.allowed_placement)
+        {
+            this.game_state = 5;
+        }
     }
 
     mouse_up_cuestick(e, pos, context, program_state)
@@ -609,6 +637,12 @@ export class Pool_Scene extends Simulation {
         
         
         super.display(context, program_state);
+        
+
+        let cam_mat = this.camera_pos.map((x,i) => Vector.from(program_state.camera_inverse[i]).mix(x, 0.1))
+        program_state.set_camera(cam_mat);    // Locate the camera here (inverted matrix).
+       
+
 
         // Draw the backgorund
         let tf = Mat4.translation(0,-10,0).times(Mat4.scale(100,100,100));
@@ -649,7 +683,6 @@ export class Pool_Scene extends Simulation {
 //             console.log(this.ball_down)
             if (this.game_state == 3 && !this.ball_down)
             {
-                console.log("herehere")
                 this.turn0 = !this.turn0;
                 if (this.turn0)
                 {
