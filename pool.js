@@ -247,6 +247,7 @@ export class Pool_Scene extends Simulation {
         this.shapes.square = new defs.Square();
         this.collider = {intersect_test: Body.intersect_sphere, points: new defs.Subdivision_Sphere(2), leeway: .3};
         this.camera_pos = Mat4.look_at(vec3(0,70,0), vec3(0,0,0), vec3(1,0,0));
+        this.reset_cam_pos = false;
         
         // background controllers
         this.floor_num = 0;
@@ -340,7 +341,10 @@ export class Pool_Scene extends Simulation {
         this.key_triggered_button("Show curtain call greetings", ["c"], () => this.game_ended ^= 1);
         this.new_line();
 
-        this.key_triggered_button("reset camera position", ['r'], () => this.camera_pos = Mat4.look_at(vec3(0,70,0), vec3(0,0,0), vec3(1,0,0)));
+        this.key_triggered_button("reset camera position", ['r'], () => {
+            this.reset_cam_pos = true;
+            this.camera_pos = Mat4.look_at(vec3(0,70,0), vec3(0,0,0), vec3(1,0,0))}
+            ,'#6E6460');
         
         super.make_control_panel();
     }
@@ -410,7 +414,7 @@ export class Pool_Scene extends Simulation {
         if (ball_type == "cueball")
         {
             this.ball_down = false;
-            this.game_state = 4;
+            this.cueball_down = true;
             this.cueball_in_bodies = false;
         }
         else
@@ -543,13 +547,13 @@ export class Pool_Scene extends Simulation {
     mouse_up_cuestick(e, pos, context, program_state)
     {
         this.game_state = 2;
-        this.cueball_init_speed = (this.steps_taken - this.down_start) * 0.1;
+        this.cueball_init_speed = (this.steps_taken - this.down_start) * 0.05;
         this.cueball_init_speed = Math.min(10, this.cueball_init_speed);
     }
 
     mouse_up_cueball(e, pos, context, program_state)
     {
-        this.game_state = 3;
+        this.game_state = 0;
     }
 
     // referred to: Wuyue Lu sample code in shadow-demo.js
@@ -638,9 +642,17 @@ export class Pool_Scene extends Simulation {
         
         super.display(context, program_state);
         
-
-        let cam_mat = this.camera_pos.map((x,i) => Vector.from(program_state.camera_inverse[i]).mix(x, 0.1))
-        program_state.set_camera(cam_mat);    // Locate the camera here (inverted matrix).
+        if (this.reset_cam_pos)
+        {
+            console.log(this.reset_cam_pos)
+            let cam_mat = this.camera_pos.map((x,i) => Vector.from(program_state.camera_inverse[i]).mix(x, 0.1))
+            console.log(cam_mat)
+            program_state.set_camera(cam_mat);    // Locate the camera here (inverted matrix).            
+        }
+        if (this.camera_pos.epsilon_equals(program_state.camera_inverse, 0.001))
+        {
+            this.reset_cam_pos = false;
+        }
        
 
 
@@ -680,7 +692,7 @@ export class Pool_Scene extends Simulation {
         // Draw the cuestick
         if (this.pm.all_bodies_static())
         {
-//             console.log(this.ball_down)
+//             console.log(this.game_state)
             if (this.game_state == 3 && !this.ball_down)
             {
                 this.turn0 = !this.turn0;
@@ -694,6 +706,11 @@ export class Pool_Scene extends Simulation {
                 }
             }
             this.ball_down = false;
+            if (this.cueball_down)
+            {
+                this.game_state = 4;
+                this.cueball_down = false;
+            }
             // handling mouse interaction
             const mouse_position = (e, rect = canvas.getBoundingClientRect()) =>
                 vec((e.clientX - (rect.left + rect.right) / 2) / ((rect.right - rect.left) / 2),
@@ -758,8 +775,12 @@ export class Pool_Scene extends Simulation {
             {
                 let a = this.steps_taken - this.down_start;
                 let d = a - this.power;
-                this.cuestick_pos = this.cuestick_pos.times(Mat4.translation(0,0,-d*0.1));
-                this.power = a;
+                if (a < 100)
+                {
+                    this.cuestick_pos = this.cuestick_pos.times(Mat4.translation(0,0,-d*0.1));
+                    this.power = a;
+                }
+
             }
             if (this.game_state == 2)
             {
