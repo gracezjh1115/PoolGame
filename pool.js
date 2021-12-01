@@ -826,7 +826,7 @@ export class Pool_Scene extends Simulation {
                                 .times(Mat4.scale(5.0 + 1.0 * Math.sin( t / 1000 ),5.0 + 1.0 * Math.sin( t / 1000 ), 5.0 + 1.0 * Math.sin( t / 1000 )));
         if(this.game_ended){
             this.shapes.congrats.draw(context, program_state, text_tranformation.times(Mat4.translation(-0.2, 1., 0.)).times(Mat4.scale(2,2,2)), this.materials.white_plastic);
-            this.shapes.member1.draw(context, program_state, text_tranformation.times(Mat4.translation(0.8, 0., 0.)), this.materials.white_plastic);
+            this.shapes.member1.draw(context, program_state, text_tranformation.times(Mat4.translation(0.5, 0., 0.)), this.materials.white_plastic);
             this.shapes.member2.draw(context, program_state, text_tranformation.times(Mat4.translation(1.2, -1., 0.)).times(Mat4.scale(1.2, 1.2, 1.2)), this.materials.white_plastic); 
         }
     }
