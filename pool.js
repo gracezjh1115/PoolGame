@@ -358,10 +358,10 @@ export class Pool_Scene extends Simulation {
         this.key_triggered_button("Show curtain call greetings", ["Shift", "C"], () => this.game_ended ^= 1);
         this.new_line();
 
-        this.key_triggered_button("reset camera position", ['r'], () => {
+        this.key_triggered_button("reset camera position", ['q'], () => {
             this.reset_cam_pos = true;
             this.camera_pos = Mat4.look_at(vec3(0,70,0), vec3(0,0,0), vec3(1,0,0))}
-            ,'#6E6460');
+            );
         
         super.make_control_panel();
     }
@@ -658,12 +658,9 @@ export class Pool_Scene extends Simulation {
         
         
         super.display(context, program_state);
-        
         if (this.reset_cam_pos)
         {
-            console.log(this.reset_cam_pos)
             let cam_mat = this.camera_pos.map((x,i) => Vector.from(program_state.camera_inverse[i]).mix(x, 0.1))
-            console.log(cam_mat)
             program_state.set_camera(cam_mat);    // Locate the camera here (inverted matrix).            
         }
         if (this.camera_pos.epsilon_equals(program_state.camera_inverse, 0.001))

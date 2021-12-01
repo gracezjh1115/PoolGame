@@ -497,7 +497,7 @@ const Matrix = tiny.Matrix =
             return this.every((r, i) => r.every((x, j) => x == b[i][j]))
         }
         epsilon_equals(b, epsilon) {
-            return this.every((r, i) => r.every((x, j) => (x - b[i][j] < epsilon)))            
+            return this.every((r, i) => r.every((x, j) => (Math.abs(x - b[i][j]) < epsilon)))            
         }
 
         plus(b) {
