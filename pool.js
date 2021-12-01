@@ -172,6 +172,20 @@ export class Test_Data {
                     ambient: .7, diffusivity: .8, specularity: .9, texture: new Texture("assets/background/blue_carpet.png")
                 }),
             ],
+            ceiling_textures: [
+                new Material(new defs.Textured_Phong(), {
+                    color: hex_color("#000000"),
+                    ambient: .7, diffusivity: .8, specularity: .9, texture: new Texture("assets/church_ceiling.png")
+                }),
+                new Material(new defs.Textured_Phong(), {
+                    color: hex_color("#000000"),
+                    ambient: .7, diffusivity: .8, specularity: .9, texture: new Texture("assets/sky_ceiling.jpg")
+                }),
+                new Material(new defs.Textured_Phong(), {
+                    color: hex_color("#000000"),
+                    ambient: .7, diffusivity: .8, specularity: .9, texture: new Texture("assets/night_ceiling.png")
+                }),
+            ],
             // logo
             bruin_texture: new Material(new Shadow_Textured_Phong_Shader(1), {
                 color: hex_color("#000000"),
@@ -252,8 +266,10 @@ export class Pool_Scene extends Simulation {
         // background controllers
         this.floor_num = 0;
         this.wall_num = 0;
+        this.ceiling_num = 0;
         this.MAX_FLOOR_NUM = 3;
         this.MAX_WALL_NUM = 3;
+        this.MAX_CEILING_NUM = 3;
 
         // 0 = selecting direction, 1 = selecting power, 2 = firing, 3 = balls moving, 4 = cueball missing, 5 = down for cueball 
         // 
@@ -334,11 +350,12 @@ export class Pool_Scene extends Simulation {
         
         // background
         this.key_triggered_button("Change ground", ["g"], () => this.floor_num = (this.floor_num + 1) % this.MAX_FLOOR_NUM);
+        this.key_triggered_button("Change top ceiling", ["c"], () => this.ceiling_num = (this.ceiling_num + 1) % this.MAX_CEILING_NUM);
         this.key_triggered_button("Change background wall", ["b"], () => this.wall_num = (this.wall_num + 1) % this.MAX_WALL_NUM);
         this.new_line();
 
         // for demo purpose ONLY
-        this.key_triggered_button("Show curtain call greetings", ["c"], () => this.game_ended ^= 1);
+        this.key_triggered_button("Show curtain call greetings", ["Shift", "C"], () => this.game_ended ^= 1);
         this.new_line();
 
         this.key_triggered_button("reset camera position", ['r'], () => {
@@ -662,18 +679,18 @@ export class Pool_Scene extends Simulation {
         // Draw the floor
         this.shapes.square.draw(context, program_state, Mat4.rotation(0.5*Math.PI,1,0,0).times(Mat4.scale(100,100,100)).times(Mat4.translation(0,0,0.25)), this.materials.floor_textures[this.floor_num]);
         // Draw the ceiling
-        this.shapes.square.draw(context, program_state, Mat4.rotation(0.5*Math.PI,1,0,0).times(Mat4.scale(100,100,100)).times(Mat4.translation(0,0,-0.9)), this.materials.floor_textures[this.floor_num]);
+        this.shapes.square.draw(context, program_state, Mat4.rotation(0.5*Math.PI,1,0,0).times(Mat4.scale(100,100,100)).times(Mat4.translation(0,0,-0.9)), this.materials.ceiling_textures[this.ceiling_num]);
         
-
+        
         // Draw the table
         tf = Mat4.rotation(Math.PI / 2, 0, 1, 0).times(Mat4.translation(0,-6.65,0)).times(Mat4.scale(30,30,30));
         //this.shapes.table.draw(context, program_state, tf, this.materials.table_texture);
-        //this.shapes.pooltable.draw(context, program_state, tf);
-        if (shadow_pass) {
-            this.shapes.pooltable.draw(context, program_state, tf);
-        } else {
-            this.shapes.pooltable.draw(context, program_state, tf, this.materials.pure);
-        }
+        this.shapes.pooltable.draw(context, program_state, tf);
+//        if (shadow_pass) {
+//            this.shapes.pooltable.draw(context, program_state, tf);
+//        } else {
+//            this.shapes.pooltable.draw(context, program_state, tf, this.materials.pure);
+//        }
 
         // display invisible wall for testing
         const display_wall = false
@@ -938,13 +955,5 @@ export class Pool_Scene extends Simulation {
         program_state.view_mat = program_state.camera_inverse;
         program_state.projection_transform = Mat4.perspective(Math.PI / 4, context.width / context.height, 0.5, 500);
         this.render_scene(context, program_state, true,true, true);
-        
-        
-        
-        
-        
-        
-
     }
-
 }
