@@ -640,7 +640,7 @@ export class Pool_Scene extends Simulation {
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     }
 
-    render_scene(context, program_state, shadow_pass, draw_light_source=false, draw_shadow=false) {
+    render_scene_shadow(context, program_state, shadow_pass, draw_light_source=false, draw_shadow=false) {
         let light_position = this.light_position;
         let light_color = this.light_color;
         const t = program_state.animation_time;
@@ -667,42 +667,8 @@ export class Pool_Scene extends Simulation {
         {
             this.reset_cam_pos = false;
         }
-       
-
-
-        // Draw the backgorund
-        let tf = Mat4.translation(0,-10,0).times(Mat4.scale(100,100,100));
-        this.shapes.cube.draw(context, program_state, Mat4.scale(100,100,100).times(Mat4.translation(0,0.2,0)), this.materials.backgrounds[this.wall_num]);
-        // Draw the floor
-        this.shapes.square.draw(context, program_state, Mat4.rotation(0.5*Math.PI,1,0,0).times(Mat4.scale(100,100,100)).times(Mat4.translation(0,0,0.25)), this.materials.floor_textures[this.floor_num]);
-        // Draw the ceiling
-        this.shapes.square.draw(context, program_state, Mat4.rotation(0.5*Math.PI,1,0,0).times(Mat4.scale(100,100,100)).times(Mat4.translation(0,0,-0.9)), this.materials.ceiling_textures[this.ceiling_num]);
         
-        
-        // Draw the table
-        tf = Mat4.rotation(Math.PI / 2, 0, 1, 0).times(Mat4.translation(0,-6.65,0)).times(Mat4.scale(30,30,30));
-        //this.shapes.table.draw(context, program_state, tf, this.materials.table_texture);
-        this.shapes.pooltable.draw(context, program_state, tf);
-//        if (shadow_pass) {
-//            this.shapes.pooltable.draw(context, program_state, tf);
-//        } else {
-//            this.shapes.pooltable.draw(context, program_state, tf, this.materials.pure);
-//        }
-
-        // display invisible wall for testing
-        const display_wall = false
-        if (display_wall) {
-            for (let w of this.walls_polygon) {
-                w.draw(context, program_state, Mat4.identity(), this.materials.white_plastic)
-            }
-
-            for (let p of this.pm.pockets) {
-                this.pockets_cylinder.draw(context, program_state, Mat4.rotation(Math.PI / 2, -1, 0, 0)
-                        .times(Mat4.translation(p[0], p[2], p[1])) // translation in rotated frame
-                        .times(Mat4.scale(this.pm.pocketRadius, this.pm.pocketRadius, 1)),
-                    this.materials.white_plastic)
-            }
-        }
+        let tf = Mat4.rotation(Math.PI / 2, 0, 1, 0).times(Mat4.translation(0,-6.65,0)).times(Mat4.scale(30,30,30));
         // Draw the cuestick
         if (this.pm.all_bodies_static())
         {
@@ -832,6 +798,60 @@ export class Pool_Scene extends Simulation {
             this.shapes.cube.draw(context, program_state, model_trans_logo_1, shadow_pass ? this.materials.bruin_texture : this.materials.pure);
             this.shapes.cube.draw(context, program_state, model_trans_logo_2, shadow_pass ? this.materials.usc_texture : this.materials.pure);
         }
+    }
+    
+    render_scene_no_shadow(context, program_state) {
+        let t = this.t = program_state.animation_time;
+        // Draw the backgorund wall
+        this.shapes.cube.draw(context, program_state, Mat4.scale(100,100,100).times(Mat4.translation(0,0.2,0)), this.materials.backgrounds[this.wall_num]);
+        // Draw the floor
+        this.shapes.square.draw(context, program_state, Mat4.rotation(0.5*Math.PI,1,0,0).times(Mat4.scale(100,100,100)).times(Mat4.translation(0,0,0.25)), this.materials.floor_textures[this.floor_num]);
+        // Draw the ceiling
+        this.shapes.square.draw(context, program_state, Mat4.rotation(0.5*Math.PI,1,0,0).times(Mat4.scale(100,100,100)).times(Mat4.translation(0,0,-0.9)), this.materials.ceiling_textures[this.ceiling_num]);
+        
+        // Draw the table
+        let tf = Mat4.rotation(Math.PI / 2, 0, 1, 0).times(Mat4.translation(0,-6.65,0)).times(Mat4.scale(30,30,30));
+        this.shapes.pooltable.draw(context, program_state, tf);
+        
+        // display invisible wall for testing
+        const display_wall = false
+        if (display_wall) {
+            for (let w of this.walls_polygon) {
+                w.draw(context, program_state, Mat4.identity(), this.materials.white_plastic)
+            }
+            
+            for (let p of this.pm.pockets) {
+                this.pockets_cylinder.draw(context, program_state, Mat4.rotation(Math.PI / 2, -1, 0, 0)
+                                           .times(Mat4.translation(p[0], p[2], p[1])) // translation in rotated frame
+                                           .times(Mat4.scale(this.pm.pocketRadius, this.pm.pocketRadius, 1)),
+                                           this.materials.white_plastic)
+            }
+        }
+        
+        // score board
+        const score_string = "UCLA: " + this.player0_score + " v.s. USC: " + this.player1_score;
+        let score_tranformation = Mat4.identity();
+        score_tranformation = score_tranformation
+        .times(Mat4.translation(26, -0.5, -32))
+        .times(Mat4.rotation(-Math.PI * 0.5, 1, 0, 0))
+        .times(Mat4.rotation(-Math.PI * 0.5, 0, 0, 1))
+        .times(Mat4.scale(1.5, 1.5, 1.5));
+        this.shapes.text.set_string(score_string, context.context);
+        this.shapes.text.draw(context, program_state, score_tranformation, this.materials.static_text);
+        
+        // show ending texts upon either player hit all balls (simplified rule?)
+        // this.player0_score + this.player1_score == 15
+        let text_tranformation = Mat4.identity();
+        text_tranformation = text_tranformation
+        .times(Mat4.translation(0, 20, 0))
+        .times(Mat4.rotation(-Math.PI * 0.5, 1, 0, 0))
+        .times(Mat4.rotation(-Math.PI * 0.5, 0, 0, 1))
+        .times(Mat4.scale(5.0 + 1.0 * Math.sin( t / 1000 ),5.0 + 1.0 * Math.sin( t / 1000 ), 5.0 + 1.0 * Math.sin( t / 1000 )));
+        if(this.game_ended){
+            this.shapes.congrats.draw(context, program_state, text_tranformation.times(Mat4.translation(-0.2, 1., 0.)).times(Mat4.scale(2,2,2)), this.materials.white_plastic);
+            this.shapes.member1.draw(context, program_state, text_tranformation.times(Mat4.translation(0.5, 0., 0.)), this.materials.white_plastic);
+            this.shapes.member2.draw(context, program_state, text_tranformation.times(Mat4.translation(1.2, -1., 0.)).times(Mat4.scale(1.2, 1.2, 1.2)), this.materials.white_plastic);
+        }
         
         // glow effect to show which player is playing
         let player_logo = Mat4.scale(2, 0.1, 2).times(Mat4.translation(13, -6.65, -18));
@@ -839,31 +859,7 @@ export class Pool_Scene extends Simulation {
         this.shapes.square.draw(context, program_state, this.turn0 ? glow_transformation : glow_transformation.times(Mat4.translation(0,10.65,0)), this.materials.glow_texture);
         this.shapes.cube.draw(context, program_state, player_logo, this.materials.bruin_texture);
         this.shapes.cube.draw(context, program_state, player_logo.times(Mat4.translation(0, 0, 24)), this.materials.usc_texture);
-        
-        // score board
-        const score_string = "UCLA: " + this.player0_score + " v.s. USC: " + this.player1_score;
-        let score_tranformation = Mat4.identity();
-        score_tranformation = score_tranformation
-                                .times(Mat4.translation(26, -0.5, -32))
-                                .times(Mat4.rotation(-Math.PI * 0.5, 1, 0, 0))
-                                .times(Mat4.rotation(-Math.PI * 0.5, 0, 0, 1))
-                                .times(Mat4.scale(1.5, 1.5, 1.5));
-        this.shapes.text.set_string(score_string, context.context);
-        this.shapes.text.draw(context, program_state, score_tranformation, this.materials.static_text);
-
-        // show ending texts upon either player hit all balls (simplified rule?)
-        // this.player0_score + this.player1_score == 15 
-        let text_tranformation = Mat4.identity();
-        text_tranformation = text_tranformation
-                                .times(Mat4.translation(0, 20, 0))
-                                .times(Mat4.rotation(-Math.PI * 0.5, 1, 0, 0))
-                                .times(Mat4.rotation(-Math.PI * 0.5, 0, 0, 1))
-                                .times(Mat4.scale(5.0 + 1.0 * Math.sin( t / 1000 ),5.0 + 1.0 * Math.sin( t / 1000 ), 5.0 + 1.0 * Math.sin( t / 1000 )));
-        if(this.game_ended){
-            this.shapes.congrats.draw(context, program_state, text_tranformation.times(Mat4.translation(-0.2, 1., 0.)).times(Mat4.scale(2,2,2)), this.materials.white_plastic);
-            this.shapes.member1.draw(context, program_state, text_tranformation.times(Mat4.translation(0.5, 0., 0.)), this.materials.white_plastic);
-            this.shapes.member2.draw(context, program_state, text_tranformation.times(Mat4.translation(1.2, -1., 0.)).times(Mat4.scale(1.2, 1.2, 1.2)), this.materials.white_plastic); 
-        }
+    
     }
 
     display(context, program_state) {
@@ -914,26 +910,7 @@ export class Pool_Scene extends Simulation {
             vec3(0, 1, 0), // assume the light to target will have a up dir of +y, maybe need to change according to your case
         );
         const light_proj_mat = Mat4.perspective(this.light_field_of_view, 1, 0.5, 500);
-        /*
-        // The parameters of the Light are: position, color, size
-        program_state.lights = [new Light(Mat4.translation(-10, 25, -30).times(light_position), this.light_color, 1000),
-            new Light(Mat4.translation(-10, 25, 30).times(light_position), this.light_color, 1000),
-            new Light(Mat4.translation(10, 25, -30).times(light_position), this.light_color, 1000),
-            new Light(Mat4.translation(10, 25, 30).times(light_position), this.light_color, 1000)];
-        // draw the point lights
-        this.shapes.ball.draw(context, program_state,
-            Mat4.translation(light_position[0], light_position[1], light_position[2]).times(Mat4.translation(-10,25,-30)).times(Mat4.scale(5,5,5)),
-            this.light_src.override({color: light_color}));
-        this.shapes.ball.draw(context, program_state,
-            Mat4.translation(light_position[0], light_position[1], light_position[2]).times(Mat4.translation(-10,25,30)).times(Mat4.scale(5,5,5)),
-            this.light_src.override({color: light_color}));
-        this.shapes.ball.draw(context, program_state,
-            Mat4.translation(light_position[0], light_position[1], light_position[2]).times(Mat4.translation(10,25,-30)).times(Mat4.scale(5,5,5)),
-            this.light_src.override({color: light_color}));
-        this.shapes.ball.draw(context, program_state,
-            Mat4.translation(light_position[0], light_position[1], light_position[2]).times(Mat4.translation(10,25,30)).times(Mat4.scale(5,5,5)),
-            this.light_src.override({color: light_color}));
-        */
+        
         // Bind the Depth Texture Buffer
         gl.bindFramebuffer(gl.FRAMEBUFFER, this.lightDepthFramebuffer);
         gl.viewport(0, 0, this.lightDepthTextureSize, this.lightDepthTextureSize);
@@ -945,12 +922,14 @@ export class Pool_Scene extends Simulation {
         program_state.light_tex_mat = light_proj_mat;
         program_state.view_mat = light_view_mat;
         program_state.projection_transform = light_proj_mat;
-        this.render_scene(context, program_state, false,false, false);
+        this.render_scene_shadow(context, program_state, false,false, false);
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
         program_state.view_mat = program_state.camera_inverse;
         program_state.projection_transform = Mat4.perspective(Math.PI / 4, context.width / context.height, 0.5, 500);
-        this.render_scene(context, program_state, true,true, true);
+        this.render_scene_shadow(context, program_state, true,true, true);
+        
+        this.render_scene_no_shadow(context, program_state);
     }
 }
