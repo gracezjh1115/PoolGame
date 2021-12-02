@@ -810,7 +810,7 @@ export class Pool_Scene extends Simulation {
         this.shapes.square.draw(context, program_state, Mat4.rotation(0.5*Math.PI,1,0,0).times(Mat4.scale(100,100,100)).times(Mat4.translation(0,0,-0.9)), this.materials.ceiling_textures[this.ceiling_num]);
         
         // Draw the table
-        let tf = Mat4.rotation(Math.PI / 2, 0, 1, 0).times(Mat4.translation(0,-6.65,0)).times(Mat4.scale(30,30,30));
+        let tf = Mat4.rotation(Math.PI / 2, 0, 1, 0).times(Mat4.translation(0,-7.125,0)).times(Mat4.scale(30,30,30));
         this.shapes.pooltable.draw(context, program_state, tf);
         
         // display invisible wall for testing
