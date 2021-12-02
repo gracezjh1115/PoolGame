@@ -11,6 +11,7 @@
 <body style="background-image: url('assets/background/ucla.png');">
 <!-- Begin typing your web page here. -->
 <!-- The following code embeds a WebGL canvas panel, loads certain scene(s), and displays panel(s) of their controls.-->
+<div class="status-bar-widget" id="status-bar">UCLA v.s. USC</div>
 <div class="canvas-widget" id="main-canvas"></div>
 <script type=module>
     // ********************* THE ENTRY POINT OF YOUR WHOLE PROGRAM STARTS HERE *********************
@@ -21,6 +22,9 @@
     const scenes = [Main_Scene, ...Additional_Scenes].map(scene => new scene());
     // This line creates your scene.
     new Canvas_Widget(element_to_replace, scenes);
+
+    import {StatusBar} from './src/statusBar.js';
+    new StatusBar(document.querySelector("#status-bar"));
 </script>
 
 </body>

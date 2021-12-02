@@ -5,6 +5,7 @@ import {ShapesFromObject, Shape_From_File} from "./src/ShapesFromObject.js";
 import {Color_Phong_Shader, Shadow_Textured_Phong_Shader,
     Depth_Texture_Shader_2D, Buffered_Texture, LIGHT_DEPTH_TEX_SIZE} from './examples/shadow-demo-shaders.js';
 import {Text_Line} from './examples/text-demo.js';
+import {StatusBar} from "./src/statusBar.js";
 
 // Pull these names into this module's scope for convenience:
 const {Vector, 
@@ -828,17 +829,6 @@ export class Pool_Scene extends Simulation {
             }
         }
         
-        // score board
-        const score_string = "UCLA: " + this.player0_score + " v.s. USC: " + this.player1_score;
-        let score_tranformation = Mat4.identity();
-        score_tranformation = score_tranformation
-        .times(Mat4.translation(26, -0.5, -32))
-        .times(Mat4.rotation(-Math.PI * 0.5, 1, 0, 0))
-        .times(Mat4.rotation(-Math.PI * 0.5, 0, 0, 1))
-        .times(Mat4.scale(1.5, 1.5, 1.5));
-        this.shapes.text.set_string(score_string, context.context);
-        this.shapes.text.draw(context, program_state, score_tranformation, this.materials.static_text);
-        
         // show ending texts upon either player hit all balls (simplified rule?)
         // this.player0_score + this.player1_score == 15
         let text_tranformation = Mat4.identity();
@@ -852,14 +842,8 @@ export class Pool_Scene extends Simulation {
             this.shapes.member1.draw(context, program_state, text_tranformation.times(Mat4.translation(0.5, 0., 0.)), this.materials.white_plastic);
             this.shapes.member2.draw(context, program_state, text_tranformation.times(Mat4.translation(1.2, -1., 0.)).times(Mat4.scale(1.2, 1.2, 1.2)), this.materials.white_plastic);
         }
-        
-        // glow effect to show which player is playing
-        let player_logo = Mat4.scale(2, 0.1, 2).times(Mat4.translation(13, -6.65, -18));
-        let glow_transformation = Mat4.scale(4.5, 0.1, 4.5).times(Mat4.translation(5.8, -9, -8)).times(Mat4.rotation(0.5 * Math.PI, 1, 0, 0));
-        this.shapes.square.draw(context, program_state, this.turn0 ? glow_transformation : glow_transformation.times(Mat4.translation(0,10.65,0)), this.materials.glow_texture);
-        this.shapes.cube.draw(context, program_state, player_logo, this.materials.bruin_texture);
-        this.shapes.cube.draw(context, program_state, player_logo.times(Mat4.translation(0, 0, 24)), this.materials.usc_texture);
-    
+
+        if (StatusBar.currentBar) StatusBar.currentBar.updateStatus(this.turn0, this.player0_score, this.player1_score)
     }
 
     display(context, program_state) {
