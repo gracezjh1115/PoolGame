@@ -278,7 +278,6 @@ export class Pool_Scene extends Simulation {
         this.cueball_direction = vec3(0,0,0);
         this.allowed_placement = true;
 
-        this.last_move = 0;
         this.last_down = 0;
         this.last_up = 0;
 
@@ -706,11 +705,10 @@ export class Pool_Scene extends Simulation {
             })
 
             canvas.addEventListener("mousemove", e => {
-                if (Date.now() -this.last_move < 100 || (this.game_state !== 0 && this.game_state !== 4))
+                if (this.game_state !== 0 && this.game_state !== 4)
                 {
                     return;
                 }
-                this.last_move = Date.now();
 
                 e.preventDefault();
                 if (this.game_state == 0)
@@ -721,7 +719,7 @@ export class Pool_Scene extends Simulation {
                 {
                     this.mouse_hover_cueball(e, mouse_position(e), context, program_state);
                 }
-            });
+            }, {once: true});
             canvas.addEventListener("mousedown", e => {
                 if (Date.now() - this.last_down > 500 && (this.game_state == 0 || this.game_state == 4) && e.button == 0)
                 {
