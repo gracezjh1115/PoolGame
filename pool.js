@@ -706,7 +706,7 @@ export class Pool_Scene extends Simulation {
             })
 
             canvas.addEventListener("mousemove", e => {
-                if (Date.now() -this.last_move < 100 || (this.game_state != 0 && this.game_state != 4))
+                if (Date.now() -this.last_move < 100 || (this.game_state !== 0 && this.game_state !== 4))
                 {
                     return;
                 }
