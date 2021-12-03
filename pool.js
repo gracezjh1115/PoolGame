@@ -305,12 +305,12 @@ export class Pool_Scene extends Simulation {
         }
         for (let p of initial_ball_position)
         {
-            this.pm.bodies.push(new Body(this.shapes.ball, this.materials.red_plastic, vec3(1,1,1), 0, 0.2, 'red')
+            this.pm.bodies.push(new Body(this.shapes.ball, this.materials.red_plastic, vec3(1,1,1), 0, 0.15, 'red')
                 .emplace(Mat4.translation(...p), vec3(0, 0, 0), 0));
         }
 
         // cueball
-        this.cueball = new Body(this.shapes.ball, this.materials.white_plastic, vec3(1,1,1), 0, 0.2, 'cueball')
+        this.cueball = new Body(this.shapes.ball, this.materials.white_plastic, vec3(1,1,1), 0, 0.15, 'cueball')
             .emplace(Mat4.translation(0, -5, -17), vec3(0, 0, 0), 0)
         this.pm.bodies.push(this.cueball)
         this.cueball_in_bodies = true;
@@ -669,7 +669,6 @@ export class Pool_Scene extends Simulation {
             this.reset_cam_pos = false;
         }
         
-        let tf = Mat4.rotation(Math.PI / 2, 0, 1, 0).times(Mat4.translation(0,-6.65,0)).times(Mat4.scale(30,30,30));
         // Draw the cuestick
         if (this.pm.all_bodies_static())
         {
@@ -782,7 +781,7 @@ export class Pool_Scene extends Simulation {
                 this.cuestick_pos = this.cuestick_pos.times(Mat4.translation(0,0,1))
             }
 
-            tf = Mat4.translation(...this.cueball.center).times(this.cuestick_pos).times(Mat4.scale(8,8,15));
+            let tf = Mat4.translation(...this.cueball.center).times(this.cuestick_pos).times(Mat4.scale(8,8,15));
             this.shapes.cuestick.draw(context, program_state, tf, shadow_pass ? this.materials.stars : this.materials.pure);
         }
         else
