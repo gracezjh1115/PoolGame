@@ -879,6 +879,10 @@ const Movement_Controls = defs.Movement_Controls =
                 this.mouse.anchor = undefined;
             });
             canvas.addEventListener("mousedown", e => {
+                if (e.button == 0)
+                {
+                    return;
+                }
                 e.preventDefault();
                 this.mouse.anchor = mouse_position(e);
             });

@@ -697,6 +697,9 @@ export class Pool_Scene extends Simulation {
             {
                 this.game_state = 0;
             }
+            canvas.addEventListener("contextmenu", e => {
+                e.preventDefault();
+            })
 
             canvas.addEventListener("mousemove", e => {
                 if (Date.now() -this.last_move < 100 || (this.game_state != 0 && this.game_state != 4))
@@ -716,8 +719,9 @@ export class Pool_Scene extends Simulation {
                 }
             });
             canvas.addEventListener("mousedown", e => {
-                if (Date.now() - this.last_down > 500 && (this.game_state == 0 || this.game_state == 4))
+                if (Date.now() - this.last_down > 500 && (this.game_state == 0 || this.game_state == 4) && e.button == 0)
                 {
+                    e.preventDefault();
                     this.last_down = Date.now();
                     //console.log("down")
                     if (this.game_state == 0)
@@ -734,6 +738,7 @@ export class Pool_Scene extends Simulation {
             canvas.addEventListener("mouseup", e => {
                 if (Date.now() - this.last_up > 20 && (this.game_state == 1 || this.game_state == 5))
                 {
+                    e.preventDefault();
                     this.last_up = Date.now();
                     //console.log("up")
                     if (this.game_state == 1)
