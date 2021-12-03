@@ -80,13 +80,15 @@ export class Physics {
      */
     get_earliest_collision_info(ball, dt) {
         let object_earliest = {dt: dt * 2}
-        for (let w of this.walls) {
-            let re = ball.boundary_collision(w, dt);
-            if (re.dt < object_earliest.dt) object_earliest = re
-        }
-        for (let e of this.edges) {
-            let re = ball.edge_collision(e, dt);
-            if (re.dt < object_earliest.dt) object_earliest = re
+        if (ball.linear_velocity.norm() > 1E-8) {
+            for (let w of this.walls) {
+                let re = ball.boundary_collision(w, dt);
+                if (re.dt < object_earliest.dt) object_earliest = re
+            }
+            for (let e of this.edges) {
+                let re = ball.edge_collision(e, dt);
+                if (re.dt < object_earliest.dt) object_earliest = re
+            }
         }
         for (let b of this.bodies) {
             let re = ball.ball_collision(b, dt);
