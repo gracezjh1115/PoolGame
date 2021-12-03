@@ -3,7 +3,7 @@ import {widgets} from '../tiny-graphics-widgets.js';
 // Pull these names into this module's scope for convenience:
 const {
     Vector, Vector3, vec, vec3, vec4, color, Matrix, Mat4,
-    Light, Shape, Material, Shader, Texture, Scene
+    Shape, Material, Shader, Scene
 } = tiny;
 
 Object.assign(tiny, widgets);

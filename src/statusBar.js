@@ -1,6 +1,4 @@
-import {tiny} from "../tiny-graphics.js";
-
-export class StatusBar {
+ export class StatusBar {
 
     static currentBar;
 

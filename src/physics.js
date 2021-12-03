@@ -1,5 +1,4 @@
-import {Body} from "./body.js";
-import {defs, tiny} from './common.js';
+import {tiny} from './common.js';
 
 // Pull these names into this module's scope for convenience:
 const {vec3} = tiny;
