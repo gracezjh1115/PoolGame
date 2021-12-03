@@ -261,6 +261,11 @@ export class Body {
         let this_r = Math.max(this.size[0], this.size[1], this.size[2])
         let otherBall_r = Math.max(otherBall.size[0], otherBall.size[1], otherBall.size[2])
 
+        //preliminary check
+        if (this.center.minus(otherBall.center).norm() >
+            this_r + otherBall_r + this.linear_velocity.norm() * dt + otherBall.linear_velocity.norm() * dt)
+            return no_collision_end_state;
+
         //solve collision time
         //norm( p + vt - p' - v't ) = r + r'
         let t = 0;
