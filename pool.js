@@ -253,6 +253,7 @@ export class Pool_Scene extends Simulation {
 
     constructor() {
         super();
+        this.show_physics_sim_control = false;
         this.data = new Test_Data();
         this.shapes = Object.assign({}, this.data.shapes);
         this.materials = Object.assign({}, this.data.materials);
@@ -329,8 +330,7 @@ export class Pool_Scene extends Simulation {
         });
     }
 
-    make_control_panel()
-    {
+    make_control_panel() {
         // scoring
         this.live_string(box => {
             box.textContent = this.turn_str + "'s turn to play"
@@ -340,11 +340,11 @@ export class Pool_Scene extends Simulation {
             box.textContent = "UCLA: " + this.player0_score.toString() + " vs. USC: " + this.player1_score
         });
         this.new_line();
-        
+
         // player
         this.key_triggered_button("Show player logo decoration", ["p"], () => this.show_player = !(this.show_player));
         this.new_line();
-        
+
         // background
         this.key_triggered_button("Change ground", ["g"], () => this.floor_num = (this.floor_num + 1) % this.MAX_FLOOR_NUM);
         this.key_triggered_button("Change top ceiling", ["c"], () => this.ceiling_num = (this.ceiling_num + 1) % this.MAX_CEILING_NUM);
@@ -356,11 +356,15 @@ export class Pool_Scene extends Simulation {
         this.new_line();
 
         this.key_triggered_button("reset camera position", ['q'], () => {
-            this.reset_cam_pos = true;
-            this.camera_pos = Mat4.look_at(vec3(0,70,0), vec3(0,0,0), vec3(1,0,0))}
-            );
-        
-        super.make_control_panel();
+                this.reset_cam_pos = true;
+                this.camera_pos = Mat4.look_at(vec3(0, 70, 0), vec3(0, 0, 0), vec3(1, 0, 0))
+            }
+        );
+
+        if (this.show_physics_sim_control) {
+            this.new_line();
+            super.make_control_panel();
+        }
     }
 
     random_color() {
