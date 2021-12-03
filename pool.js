@@ -3,13 +3,13 @@ import {Body} from "./src/body.js";
 import {Physics} from "./src/physics.js";
 import {ShapesFromObject, Shape_From_File} from "./src/ShapesFromObject.js";
 import {Color_Phong_Shader, Shadow_Textured_Phong_Shader,
-    Depth_Texture_Shader_2D, Buffered_Texture, LIGHT_DEPTH_TEX_SIZE} from './examples/shadow-demo-shaders.js';
+    Buffered_Texture, LIGHT_DEPTH_TEX_SIZE} from './examples/shadow-demo-shaders.js';
 import {Text_Line} from './examples/text-demo.js';
 import {StatusBar} from "./src/statusBar.js";
 
 // Pull these names into this module's scope for convenience:
 const {Vector, 
-vec, vec3, unsafe3, vec4, color, hex_color, Mat4, Light, Shape, Material, Shader, Texture, Scene} = tiny;
+vec, vec3, vec4, color, hex_color, Mat4, Light, Material, Texture, Scene} = tiny;
 
 const {Textured_Phong, Phong_Shader} = defs
 
@@ -95,8 +95,6 @@ export class Test_Data {
             text: new Texture("assets/text.png"),
             club: new Texture("assets/club.jpg"),
         }
-
-        const shader = new defs.Fake_Bump_Map(1);
 
         this.materials = {
             stars: new Material(new Shadow_Textured_Phong_Shader(1), {
@@ -252,15 +250,13 @@ export class Test_Data {
 }
 
 export class Pool_Scene extends Simulation {
-    // ** Inertia_Demo** demonstration: This scene lets random initial momentums
-    // carry several bodies until they fall due to gravity and bounce.
+
     constructor() {
         super();
         this.data = new Test_Data();
         this.shapes = Object.assign({}, this.data.shapes);
         this.materials = Object.assign({}, this.data.materials);
         this.shapes.square = new defs.Square();
-        this.collider = {intersect_test: Body.intersect_sphere, points: new defs.Subdivision_Sphere(2), leeway: .3};
         this.camera_pos = Mat4.look_at(vec3(0,70,0), vec3(0,0,0), vec3(1,0,0));
         this.reset_cam_pos = false;
         
@@ -289,7 +285,7 @@ export class Pool_Scene extends Simulation {
         this.player0_score = 0;
         this.player1_score = 0;
         this.turn0 = true;
-        this.turn_str = "player 0";
+        this.turn_str = "UCLA";
         this.ball_down = false;
 
         // shadowing
@@ -679,11 +675,11 @@ export class Pool_Scene extends Simulation {
                 this.turn0 = !this.turn0;
                 if (this.turn0)
                 {
-                    this.turn_str = "player 0";
+                    this.turn_str = "UCLA";
                 }
                 else
                 {
-                    this.turn_str = "player 1";
+                    this.turn_str = "USC";
                 }
             }
             this.ball_down = false;
