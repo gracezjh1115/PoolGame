@@ -542,6 +542,7 @@ export class Pool_Scene extends Simulation {
         {
             this.cueball.emplace(Mat4.translation(...cueball), vec3(0,0,0), 0);
             this.pm.bodies.push(this.cueball);
+            this.cueball_in_bodies = true
         }
 
 
