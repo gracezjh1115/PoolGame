@@ -862,7 +862,7 @@ export class Pool_Scene extends Simulation {
         //first, draw everything inherit from parent class, all the moving objects in this case
         if (!context.scratchpad.controls) {
             this.children.push(context.scratchpad.controls = new defs.Movement_Controls());
-            this.children.push(new defs.Program_State_Viewer());
+            //this.children.push(new defs.Program_State_Viewer());
             program_state.set_camera(this.camera_pos);    // Locate the camera here (inverted matrix).
             /*
             program_state.set_camera(Mat4.look_at(

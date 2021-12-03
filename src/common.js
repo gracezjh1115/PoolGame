@@ -893,6 +893,7 @@ const Movement_Controls = defs.Movement_Controls =
             canvas.addEventListener("mouseout", e => {
                 if (!this.mouse.anchor) this.mouse.from_center.scale_by(0)
             });
+            canvas.oncontextmenu = function(e) { e.preventDefault(); e.stopPropagation(); }
         }
 
         show_explanation(document_element) {
