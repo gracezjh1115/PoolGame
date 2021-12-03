@@ -208,7 +208,7 @@ export class Body {
         let edge_direction = edge[1].minus(edge[0]).normalized()
         const edge0_to_ball = this.center.minus(edge[0])
         const ball_to_edge_on_plane = edge0_to_ball.minus(edge_direction.times(edge0_to_ball.dot(edge_direction)))
-        if (ball_to_edge_on_plane.norm() > this.linear_velocity.norm() * dt + this_r * 2) return no_collision_end_state // *2 for safety
+        if (ball_to_edge_on_plane.norm() > this.linear_velocity.norm() * dt + this_r) return no_collision_end_state // *2 for safety
 
         const edge_to_velocity = edge_direction.cross(this.linear_velocity).normalized()
         const closest_distance = edge0_to_ball.dot(edge_to_velocity)
